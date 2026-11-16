@@ -1,0 +1,12 @@
+# Optional image publication; normal local deployment builds via compose.yaml.
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-exam-backend:local}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+  web:
+    image: ${WEB_IMAGE:-exam-web:local}
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile

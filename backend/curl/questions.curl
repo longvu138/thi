@@ -1,0 +1,169 @@
+# Câu hỏi theo đợt (ADMIN). Đăng nhập theo auth.curl để có cookie và CSRF.
+# Chỉ dùng dữ liệu test. Thay các placeholder trước khi chạy.
+
+# Thành công: danh sách
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions?page=1&limit=20" --cookie admin.cookies.txt
+
+# Thành công: tìm kiếm và lọc nhóm
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions?search=E2E_Q&category=<CATEGORY_NAME>" --cookie admin.cookies.txt
+
+# Thành công: nhóm phân trang
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/categories?page=1&limit=100" --cookie admin.cookies.txt
+
+# Thành công: tải mẫu
+curl --request GET "http://localhost:3108/api/admin/questions/template" --cookie admin.cookies.txt --output mau-cau-hoi.xlsx
+
+# Thành công: chi tiết
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie admin.cookies.txt
+
+# Thành công: tạo tối thiểu 2 lựa chọn
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"questionCode": "E2E_Q_MIN", "category": "Nhóm test", "content": "Nội dung test", "optionA": "Một", "optionB": "Hai", "correctAnswer": "A"}'
+
+# Thành công: tạo đầy đủ 4 lựa chọn
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"questionCode": "E2E_Q_FULL", "category": "Nhóm test", "content": "Nội dung test", "optionA": "Một", "optionB": "Hai", "optionC": "Ba", "optionD": "Bốn", "correctAnswer": "D", "allowShuffleOptions": false}'
+
+# Thành công: sửa tối thiểu
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"content": "Nội dung mới"}'
+
+# Thành công: sửa đầy đủ
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"questionCode": "E2E_Q_UPDATED", "category": "Nhóm test", "content": "Nội dung test", "optionA": "Một", "optionB": "Hai", "optionC": "Ba", "optionD": "Bốn", "correctAnswer": "C", "allowShuffleOptions": false}'
+
+# Thành công: xóa hẳn nếu chưa dùng, vô hiệu hóa nếu đã vào đề
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# Validation 422: thiếu trường
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Validation 422: đáp án không tồn tại
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"questionCode": "E2E_Q_BAD", "category": "Nhóm test", "content": "Test", "optionA": "Một", "optionB": "Hai", "correctAnswer": "D"}'
+
+# Validation 422: sai cờ xáo trộn
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"allowShuffleOptions": "false"}'
+
+# Validation 422: sai định danh nhóm
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions?category[]=invalid" --cookie admin.cookies.txt
+
+# Validation 422: sai định danh câu hỏi
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/invalid" --cookie admin.cookies.txt
+
+# Preview: không ghi dữ liệu, trả rows/errors và previewToken nếu tất cả hợp lệ.
+# Test lần lượt file thiếu cột, trùng mã, đáp án sai, 2/3/4 lựa chọn.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=preview" --form "file=@<EXCEL_FILE.xlsx>"
+
+# Commit: chỉ chạy sau khi rà soát và xác nhận; gửi lại ĐÚNG file đã preview.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=commit" --form "previewToken=<PREVIEW_TOKEN>" --form "file=@<EXCEL_FILE.xlsx>"
+
+# Validation 422: commit không có previewToken.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=commit" --form "file=@<EXCEL_FILE.xlsx>"
+
+# Validation 422: thiếu file hoặc mode sai.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=invalid"
+
+# Xung đột 409: preview file hợp lệ, dùng request tạo câu hỏi cùng mã, rồi commit file đã preview.
+# Commit phải hủy toàn bộ; phát lại commit đã thành công cũng trả 409.
+# CSRF 403: phiên hợp lệ nhưng token sai.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie admin.cookies.txt --header "X-CSRF-Token: invalid" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401: GET /
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions"
+
+# Phiên hết hạn 401: GET /
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie expired.cookies.txt
+
+# USER bị từ chối 403: GET /
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: GET /categories
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/categories"
+
+# Phiên hết hạn 401: GET /categories
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/categories" --cookie expired.cookies.txt
+
+# USER bị từ chối 403: GET /categories
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/categories" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: GET /template
+curl --request GET "http://localhost:3108/api/admin/questions/template"
+
+# Phiên hết hạn 401: GET /template
+curl --request GET "http://localhost:3108/api/admin/questions/template" --cookie expired.cookies.txt
+
+# USER bị từ chối 403: GET /template
+curl --request GET "http://localhost:3108/api/admin/questions/template" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: GET /<QUESTION_ID>
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>"
+
+# Phiên hết hạn 401: GET /<QUESTION_ID>
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie expired.cookies.txt
+
+# USER bị từ chối 403: GET /<QUESTION_ID>
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: POST /
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: POST /
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# USER bị từ chối 403: POST /
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401: PATCH /<QUESTION_ID>
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: PATCH /<QUESTION_ID>
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# USER bị từ chối 403: PATCH /<QUESTION_ID>
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401: PUT /<QUESTION_ID>
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: PUT /<QUESTION_ID>
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# USER bị từ chối 403: PUT /<QUESTION_ID>
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401: DELETE /<QUESTION_ID>
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: DELETE /<QUESTION_ID>
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# USER bị từ chối 403: DELETE /<QUESTION_ID>
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/<QUESTION_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401: POST /import
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: POST /import
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# USER bị từ chối 403: POST /import
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+
+# Xuất tất cả câu đang hoạt động của đợt, chín cột giống mẫu để import sang đợt khác.
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/export" --cookie admin.cookies.txt --output cau-hoi.xlsx
+# 422: mã đợt sai
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/invalid/questions/export" --cookie admin.cookies.txt
+# 401/401/403: export chưa đăng nhập, phiên hết hạn, USER
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/export"
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/export" --cookie expired.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/export" --cookie user.cookies.txt
+# 409: xóa/vô hiệu hóa câu làm đợt OPEN thiếu questionCount; đóng đợt hoặc thêm đủ câu trước.
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<OPEN_ROUND_ID>/questions/<QUESTION_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+# 409: mã trùng trong cùng đợt; cùng mã ở đợt khác được phép.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"questionCode":"<EXISTING_CODE>","category":"Nhóm test","content":"Test","optionA":"Một","optionB":"Hai","correctAnswer":"A"}'
+
+# Import file chỉ có A/B/C: có thể bỏ hẳn cột lua_chon_d (hoặc option_d).
+# Dùng --form để gửi nội dung file thật, không tự đặt Content-Type/boundary.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=preview" --form "file=@bo_cau_hoi_tu_pdf.xlsx"
+
+# File XLSX dùng prefix namespace XML (x:workbook/x:worksheet) cũng gửi cùng luồng.
+# Đã sửa bộ đọc; không cần đổi đuôi file, đổi header hoặc gán boundary thủ công.
+# Với bản sửa từ file PDF: preview phải báo 77 hợp lệ / 0 lỗi trước khi commit.
+curl --request POST "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/questions/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=preview" --form "file=@outputs/thi-import-xml/bo_cau_hoi_tu_pdf_da_sua.xlsx"

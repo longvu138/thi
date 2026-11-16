@@ -1,0 +1,16 @@
+.guide-page { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+.guide-page li { margin-bottom: 12px; }
+.guide-qr { text-align: center; }
+.guide-qr > .ant-qrcode { margin: 0 auto 8px; }
+@media print {
+ @page { size: A4; margin: 15mm; }
+ body { background: #fff !important; color: #000 !important; }
+ body * { visibility: hidden; }
+ .guide-page, .guide-page * { visibility: visible; }
+ .guide-page { position: absolute; inset: 0; max-width: none; margin: 0; padding: 0; font-size: 11pt; color: #000; }
+ .guide-page .ant-card { box-shadow: none; border: 0; background: #fff; color: #000; }
+ .guide-page .ant-card-body { padding: 0; }
+ .guide-page .ant-typography { color: #000 !important; }
+ .guide-controls, .guide-controls * { display: none !important; }
+ .guide-page li { break-inside: avoid; }
+}

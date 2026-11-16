@@ -1,0 +1,13 @@
+# API công khai, cố ý không cần đăng nhập: chỉ thông tin đợt đang thi/chạy thử.
+# Thành công tối giản / đầy đủ phân trang, không trả câu hỏi/đáp án/danh tính.
+curl --request GET 'http://localhost:3108/api/public/exam-rounds'
+curl --request GET 'http://localhost:3108/api/public/exam-rounds?page=1&limit=5'
+# Validation 422: không cho chọn trạng thái nháp/đóng hay lọc dữ liệu riêng.
+curl --request GET 'http://localhost:3108/api/public/exam-rounds?status=DRAFT'
+# Bảo mật: cookie hết hạn vẫn truy cập được thông tin công khai (200),
+# API đợt riêng và start vẫn yêu cầu phiên USER (401 nếu không có).
+curl --request GET 'http://localhost:3108/api/public/exam-rounds' --cookie expired.cookies.txt
+curl --request GET 'http://localhost:3108/api/exam-rounds'
+
+# Không có cookie: kiểm tra 401 trước khi tạo lượt.
+curl --request POST 'http://localhost:3108/api/exam-rounds/<ROUND_ID>/start' --header 'Content-Type: application/json' --data '{}'

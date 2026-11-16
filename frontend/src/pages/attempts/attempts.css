@@ -1,0 +1,41 @@
+.attempt-workspace>.ant-space-item:first-child {position:sticky;top:0;z-index:10;}
+.attempt-toolbar-row {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+.attempt-clock {display:flex;align-items:center;gap:8px;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap;}
+.attempt-clock.is-warning {color:#cf0011;}
+[data-theme="dark"] .attempt-clock.is-warning {color:#ff9c9c;}
+.attempt-save-state {display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--text-muted);font-size:14px;}
+.attempt-grid {display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start;}
+.attempt-grid>* {min-width:0;}
+.attempt-question-content.ant-typography {white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;}
+.attempt-options {display:flex;flex-direction:column;gap:12px;width:100%;margin:12px 0 24px;}
+.attempt-option.ant-radio-wrapper {border:1px solid var(--border-soft);border-radius:10px;padding:14px 16px;margin:0;min-height:48px;align-items:flex-start;white-space:pre-wrap;overflow-wrap:anywhere;}
+.attempt-option.is-selected {border-color:#cf0011;background:rgba(207,0,17,.05);}
+.attempt-question-actions {width:100%;justify-content:flex-end;}
+.attempt-navigator {position:sticky;top:140px;max-height:calc(100dvh - 240px);overflow-y:auto;}
+.attempt-question-group+.attempt-question-group {margin-top:20px;}
+.attempt-question-group h5.ant-typography {overflow-wrap:anywhere;}
+.attempt-number-grid {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+.attempt-number-grid .ant-btn {padding-inline:0;min-height:40px;}
+.attempt-number-grid .is-answered:not(.ant-btn-primary) {border-color:#2c8652;color:#267448;background:rgba(44,134,82,.08);}
+[data-theme="dark"] .attempt-number-grid .is-answered:not(.ant-btn-primary) {color:#a2e5bb;border-color:#6dbf8d;}
+@media(max-width:1023.98px){.attempt-grid{grid-template-columns:minmax(0,1fr);}.attempt-navigator{position:static;max-height:none;overflow-y:visible;}.attempt-number-grid{grid-template-columns:repeat(auto-fill,minmax(44px,1fr));}.attempt-number-grid .ant-btn{min-height:44px;}}
+@media(max-width:575px){.attempt-toolbar .ant-card-body,.attempt-question .ant-card-body,.attempt-navigator .ant-card-body{padding:16px;}.attempt-clock{font-size:22px;}.attempt-toolbar-row{gap:12px;}.attempt-option.ant-radio-wrapper{padding:12px;}}
+.attempt-sync-icon{display:inline-flex;font-size:16px;color:var(--text-muted);}
+.attempt-fixed-notice{min-height:28px;max-height:56px;overflow:auto;display:flex;align-items:center;color:var(--text-muted);font-size:13px;}
+.attempt-mobile-navigation{position:fixed;bottom:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--portal-card,var(--panel-bg,#fff));border-top:1px solid var(--border);}
+@media(max-width:767.98px){.attempt-workspace{padding-bottom:88px;}.attempt-mobile-navigation .ant-btn{padding-inline:10px;}.attempt-clock{font-size:21px;}.attempt-question-actions{justify-content:flex-start;}}
+
+/* Chỉ toolbar dùng nền đặc: không sửa glass-card chung. */
+.participant-session .attempt-toolbar.ant-card {background:var(--portal-card,var(--panel-bg)) !important;backdrop-filter:none;-webkit-backdrop-filter:none;}
+.attempt-auto-advance {margin-bottom:12px;}
+.attempt-question-drawer .ant-drawer-content {background:var(--portal-card);color:var(--portal-text);}
+.participant-session.attempt-question-drawer .attempt-navigator {position:static;max-height:none;overflow:visible;}
+.attempt-question-drawer.participant-session {min-height:0;}
+@media(max-width:767.98px){
+ .attempt-toolbar-row {gap:8px;}
+ .attempt-heading {width:100%;min-width:0;}
+ .attempt-round-title.ant-typography {font-size:16px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+ .attempt-secondary-tags {display:none;}
+ .attempt-mobile-navigation .ant-btn {padding-inline:6px;font-size:12px;}
+ .attempt-mobile-navigation .ant-btn-text {white-space:normal;line-height:1.35;}
+}

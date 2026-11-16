@@ -1,0 +1,7 @@
+import {Button,Card,Pagination,Space,Table,Typography} from 'antd';
+import {useMediaQuery} from '../../hooks/useMediaQuery';
+export const CommitteeReport=({data=null,loading=false,page,onPage,onSelect})=>{
+ const compact=useMediaQuery('(max-width:1199.98px)');const rows=Array.isArray(data?.items)?data.items:[];
+ const columns=[{title:'Đảng bộ',dataIndex:'partyCommittee'},...[['participantCount','Tham gia'],['passedCount','Đạt'],['failedCount','Không đạt'],['incompleteCount','Chưa hoàn thành'],['passRate','Tỷ lệ Đạt (%)'],['attemptCount','Tổng lượt']].map(([dataIndex,title])=>({title,dataIndex})),{title:'Thao tác',key:'actions',render:(_,row)=><Button onClick={()=>onSelect(row)}>Xem người dự thi</Button>}];
+ return <Space orientation="vertical" className="full-width" size={16}>{compact?<>{!rows.length&&<Card loading={loading}>Chưa có dữ liệu</Card>}{rows.map(row=><Card key={row.committeeKey} className="glass-card" loading={loading} onClick={()=>onSelect(row)}>{columns.map(column=><div key={column.dataIndex||column.key}><Typography.Text type="secondary">{column.title}: </Typography.Text>{column.render?column.render(row[column.dataIndex],row):row[column.dataIndex]}</div>)}</Card>)}</>:<Card className="glass-card"><Table rowKey="committeeKey" columns={columns} dataSource={rows} loading={loading} pagination={false} scroll={{x:1100}} onRow={row=>({onClick:()=>onSelect(row),style:{cursor:'pointer'}})}/></Card>}<Pagination current={page.page} pageSize={page.limit} total={data?.pagination?.total||0} onChange={(page,limit)=>onPage({page,limit})}/></Space>;
+};

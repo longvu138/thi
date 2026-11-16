@@ -1,0 +1,2 @@
+.round-qr-print-root{display:none;}
+@media print{body:has(>.round-qr-print-root)>:not(.round-qr-print-root){display:none!important}.round-qr-print-root{display:block!important;text-align:center;padding:20mm;background:white;color:black;font-family:serif}.round-qr-print-root canvas{display:block;margin:16px auto}.round-qr-print-root p{overflow-wrap:anywhere}@page{size:A4;margin:15mm}}

@@ -1,0 +1,75 @@
+# ==============================================================================
+# PHÂN HỆ: XÁC THỰC VÀ QUẢN LÝ PHIÊN
+# ==============================================================================
+# Backend dùng JWT (chứa id phiên trong bảng auth_sessions) trong cookie HttpOnly,
+# không nhận Authorization Bearer. Đăng nhập bằng --cookie-jar để lưu cookie.
+# Sao chép csrfToken trong JSON response vào <ADMIN_CSRF_TOKEN>/<USER_CSRF_TOKEN>
+# cho POST/PUT/PATCH/DELETE đã đăng nhập.
+# Admin đầu tiên tạo bằng CLI (giai đoạn 1 của docs/PLAN.md), không có API tự đăng ký.
+
+# [Kịch bản 1.1 - Thành công]: Đăng nhập ADMIN và lưu cookie phiên
+curl --location 'http://localhost:3108/api/auth/login' \
+  --cookie-jar admin.cookies.txt \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "username": "<ADMIN_USERNAME>",
+    "password": "<ADMIN_PASSWORD>"
+  }'
+
+# [Kịch bản 1.2 - Thành công]: Đăng nhập USER bằng cookie jar riêng
+curl --location 'http://localhost:3108/api/auth/login' \
+  --cookie-jar user.cookies.txt \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "username": "<USER_USERNAME>",
+    "password": "<USER_PASSWORD>"
+  }'
+
+# [Kịch bản 1.3 - Validation 422]: Thiếu mật khẩu
+curl --location 'http://localhost:3108/api/auth/login' \
+  --header 'Content-Type: application/json' \
+  --data '{"username":"<ADMIN_USERNAME>"}'
+
+# [Kịch bản 1.4 - Bảo mật 401]: Sai thông tin đăng nhập hoặc tài khoản bị khóa/xóa mềm
+curl --location 'http://localhost:3108/api/auth/login' \
+  --header 'Content-Type: application/json' \
+  --data '{"username":"invalid-user","password":"InvalidPassword@123"}'
+
+# [Kịch bản 2.1 - Thành công]: Lấy người dùng hiện tại (id, username, fullName, role) và CSRF token mới
+curl --location 'http://localhost:3108/api/auth/me' \
+  --cookie admin.cookies.txt
+
+# [Kịch bản 2.2 - Bảo mật 401]: Không gửi cookie
+curl --location 'http://localhost:3108/api/auth/me'
+
+# [Kịch bản 3.1 - Thành công]: Đăng xuất, thu hồi phiên hiện tại
+curl --location --request POST 'http://localhost:3108/api/auth/logout' \
+  --cookie admin.cookies.txt \
+  --header 'X-CSRF-Token: <ADMIN_CSRF_TOKEN>'
+
+# [Kịch bản 3.2 - Bảo mật 403]: Đăng xuất thiếu CSRF token -> 403 CSRF_TOKEN_INVALID
+curl --location --request POST 'http://localhost:3108/api/auth/logout' \
+  --cookie user.cookies.txt
+
+# [Kịch bản 3.3 - Bảo mật 401]: Đăng xuất không có cookie
+curl --location --request POST 'http://localhost:3108/api/auth/logout'
+
+# Người dự thi: vào bằng họ tên, đảng bộ, chi bộ; không cần username/password.
+# Lưu cookie và lấy csrfToken từ response để gọi API ghi sau đó.
+curl --request POST "http://localhost:3108/api/auth/enter" --header "Content-Type: application/json" --cookie-jar participant.cookies.txt --data '{"fullName":"E2E Nguyễn Văn An","partyCommittee":"E2E Đảng bộ A","partyBranch":"E2E Chi bộ 1"}'
+
+# Nhập lại cùng thông tin (không phân biệt hoa/thường, khoảng trắng thừa) phải trả cùng user.id.
+curl --request POST "http://localhost:3108/api/auth/enter" --header "Content-Type: application/json" --cookie-jar participant.cookies.txt --data '{"fullName":" e2e   nguyễn văn an ","partyCommittee":"E2E ĐẢNG BỘ A","partyBranch":"E2E Chi bộ 1"}'
+
+# Validation 422: thiếu trường bắt buộc.
+curl --request POST "http://localhost:3108/api/auth/enter" --header "Content-Type: application/json" --data '{"fullName":"E2E Người test"}'
+
+# Bảo mật 422: không cho tự gán vai trò quản trị.
+curl --request POST "http://localhost:3108/api/auth/enter" --header "Content-Type: application/json" --data '{"fullName":"E2E Người test","partyCommittee":"E2E Đảng bộ A","partyBranch":"E2E Chi bộ 1","role":"ADMIN"}'
+
+# Người dự thi không được gọi API quản trị: 403.
+curl "http://localhost:3108/api/admin/users" --cookie participant.cookies.txt
+
+# Khi ADMIN khóa/xóa người dự thi: gọi /auth/enter với cùng bộ thông tin phải trả 403,
+# không tạo người mới để đặt lại số lượt. Phiên đã thu hồi phải trả 401 khi gọi /auth/me.
+curl "http://localhost:3108/api/auth/me" --cookie participant.cookies.txt

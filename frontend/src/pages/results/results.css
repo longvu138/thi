@@ -1,0 +1,9 @@
+.result-workspace .result-outcome.ant-typography {font-size:32px;margin:12px 0 8px;}
+.result-outcome.is-pass {color:#267448;}
+.result-outcome.is-fail {color:var(--portal-red,var(--primary-red));}
+[data-theme="dark"] .result-outcome.is-pass {color:#a2e5bb;}
+.result-score {font-size:18px;}
+.result-receipt {margin:16px 0;overflow-wrap:anywhere;}
+.result-actions {margin-top:12px;}
+.result-next {margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+@media(max-width:767.98px){.result-workspace .ant-card-body{padding:16px;}.result-workspace .result-outcome.ant-typography{font-size:28px;}.result-actions{width:100%;}}

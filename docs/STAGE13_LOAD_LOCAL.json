@@ -1,0 +1,80 @@
+{
+  "note": "Local Docker QA; 100 users, compressed timings; not proof of 1000-user production capacity. Dataset: 10 questions/attempt, 3 options.",
+  "docker": {
+    "cpus": 8,
+    "memoryBytes": 8215117824
+  },
+  "runId": "05b1da56",
+  "profile": {
+    "roundId": "f9dfd508-a0e8-4d1d-af68-331169d03368",
+    "database": "exam_load_test_stage13",
+    "total": 100,
+    "concurrency": 100,
+    "baseUrl": "http://web/api",
+    "rampSeconds": 5,
+    "durationSeconds": 20,
+    "submitWindowSeconds": 5,
+    "batchSeconds": 5
+  },
+  "completed": 100,
+  "requests": 800,
+  "failures": 0,
+  "httpErrors": {},
+  "status429": 0,
+  "status5xx": 0,
+  "errors": {},
+  "timings": {
+    "POST /auth/enter": {
+      "count": 100,
+      "averageMs": 67.95,
+      "p50Ms": 63.58,
+      "p95Ms": 105.51,
+      "p99Ms": 120.45
+    },
+    "POST /exam-rounds/:id/start": {
+      "count": 200,
+      "averageMs": 16.59,
+      "p50Ms": 11.81,
+      "p95Ms": 33.09,
+      "p99Ms": 134.23
+    },
+    "GET /attempts/:id": {
+      "count": 200,
+      "averageMs": 7.7,
+      "p50Ms": 5.6,
+      "p95Ms": 17.4,
+      "p99Ms": 37.18
+    },
+    "PUT /attempts/:id/answers": {
+      "count": 200,
+      "averageMs": 10.3,
+      "p50Ms": 8.79,
+      "p95Ms": 18.26,
+      "p99Ms": 33.93
+    },
+    "POST /attempts/:id/submit": {
+      "count": 100,
+      "averageMs": 12.44,
+      "p50Ms": 11.78,
+      "p95Ms": 16.46,
+      "p99Ms": 25.17
+    }
+  },
+  "overall": {
+    "count": 800,
+    "averageMs": 18.7,
+    "p50Ms": 10.78,
+    "p95Ms": 64.57,
+    "p99Ms": 111.75
+  },
+  "checks": {
+    "excessAttempts": 0,
+    "duplicateInProgress": 0,
+    "nonTrial": 0
+  },
+  "thresholds": {
+    "errorRate": 0,
+    "pass": true
+  },
+  "cleanup": "ADMIN DELETE /api/admin/exam-rounds/f9dfd508-a0e8-4d1d-af68-331169d03368/trial-data; người E2E_LOAD_05b1da56 giữ để đối chiếu."
+}

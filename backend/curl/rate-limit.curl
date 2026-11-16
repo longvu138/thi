@@ -1,0 +1,11 @@
+# Đọc giới hạn candidate đã đăng nhập: quota chung theo user cho các module dưới đây.
+# Lặp ở môi trường riêng với CANDIDATE_RATE_LIMIT_MAX thấp sẽ nhận 429/RATE_LIMITED + Retry-After.
+# Không chạy vòng lặp trên server thi thật. Backend log event candidate_rate_limited, user và IP.
+curl -i http://localhost:3108/api/exam-rounds -b '<COOKIE_FILE>'
+curl -i http://localhost:3108/api/my-results -b '<COOKIE_FILE>'
+curl -i http://localhost:3108/api/attempts/<ATTEMPT_ID> -b '<COOKIE_FILE>'
+# Không có phiên: 401 (không tạo user quota theo dữ liệu header tự khai).
+curl -i http://localhost:3108/api/exam-rounds
+# Tra cứu công khai: quota IP riêng, 422 với dữ liệu thiếu; 429 nếu vượt quota.
+curl -i -X POST http://localhost:3108/api/receipts/lookup -H 'Content-Type: application/json' --data '{}'
+# Mã IP thật chỉ tin một proxy Caddy; không public cổng Backend.

@@ -1,0 +1,112 @@
+name: ${COMPOSE_PROJECT_NAME:-exam}
+x-backend-env: &backend-env
+  NODE_ENV: ${APP_ENV:-production}
+  PORT: "3108"
+  TZ: UTC
+  DB_HOST: db
+  DB_PORT: "3306"
+  DB_NAME: ${MYSQL_DATABASE:-exam}
+  DB_USER: ${MYSQL_USER:-exam}
+  DB_PASSWORD: ${MYSQL_PASSWORD:?Configure MYSQL_PASSWORD}
+  DB_POOL_MIN: "0"
+  DB_POOL_MAX: ${DB_POOL_MAX:-20}
+  JWT_SECRET: ${JWT_SECRET:?Configure JWT_SECRET}
+  CSRF_SECRET: ${CSRF_SECRET:?Configure CSRF_SECRET}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+  AUTH_COOKIE_NAME: exam_session
+  AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
+  AUTH_COOKIE_SAME_SITE: lax
+  ALLOW_INSECURE_HTTP: ${ALLOW_INSECURE_HTTP:-false}
+  CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:-}
+  CORS_ALLOW_SAME_ORIGIN: "true"
+  TRUST_PROXY: "1"
+  API_RATE_LIMIT_MAX: ${API_RATE_LIMIT_MAX:-30000}
+  API_RATE_LIMIT_WINDOW_MS: ${API_RATE_LIMIT_WINDOW_MS:-900000}
+  CANDIDATE_RATE_LIMIT_MAX: ${CANDIDATE_RATE_LIMIT_MAX:-600}
+  CANDIDATE_RATE_LIMIT_WINDOW_MS: ${CANDIDATE_RATE_LIMIT_WINDOW_MS:-900000}
+  PARTICIPANT_RATE_LIMIT_MAX: ${PARTICIPANT_RATE_LIMIT_MAX:-3000}
+  PARTICIPANT_RATE_LIMIT_WINDOW_MS: ${PARTICIPANT_RATE_LIMIT_WINDOW_MS:-900000}
+  LOGIN_RATE_LIMIT_MAX: ${LOGIN_RATE_LIMIT_MAX:-10}
+  LOGIN_RATE_LIMIT_WINDOW_MS: ${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+  LOGIN_IP_RATE_LIMIT_MAX: ${LOGIN_IP_RATE_LIMIT_MAX:-50}
+  LOGIN_IP_RATE_LIMIT_WINDOW_MS: ${LOGIN_IP_RATE_LIMIT_WINDOW_MS:-900000}
+  RECEIPT_RATE_LIMIT_MAX: ${RECEIPT_RATE_LIMIT_MAX:-30}
+  RECEIPT_RATE_LIMIT_WINDOW_MS: ${RECEIPT_RATE_LIMIT_WINDOW_MS:-900000}
+  AUTH_SENSITIVE_RATE_LIMIT_MAX: ${AUTH_SENSITIVE_RATE_LIMIT_MAX:-10}
+  AUTH_SENSITIVE_RATE_LIMIT_WINDOW_MS: ${AUTH_SENSITIVE_RATE_LIMIT_WINDOW_MS:-900000}
+  ATTEMPT_EXPIRY_JOB_ENABLED: ${ATTEMPT_EXPIRY_JOB_ENABLED:-true}
+  ATTEMPT_EXPIRY_INTERVAL_MS: ${ATTEMPT_EXPIRY_INTERVAL_MS:-10000}
+  ATTEMPT_EXPIRY_MAX_RUN_MS: ${ATTEMPT_EXPIRY_MAX_RUN_MS:-20000}
+  LOAD_TEST_ENABLED: ${LOAD_TEST_ENABLED:-false}
+  APP_SETTINGS_FILE: /app/storage/settings.json
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  LOG_MAX_SIZE: 20m
+  LOG_RETENTION: 30d
+x-logging: &logging
+  driver: json-file
+  options: {max-size: "10m", max-file: "5"}
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-exam}
+      MYSQL_USER: ${MYSQL_USER:-exam}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Configure MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Configure MYSQL_ROOT_PASSWORD}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--max-connections=${MYSQL_MAX_CONNECTIONS:-150}"]
+    volumes: ["mysql_data:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u$$MYSQL_USER -D $$MYSQL_DATABASE -Nse 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    logging: *logging
+  migrate:
+    image: ${BACKEND_IMAGE:-exam-backend:local}
+    build: {context: ., dockerfile: backend/Dockerfile}
+    environment: *backend-env
+    command: ["pnpm", "migrate"]
+    restart: "no"
+    depends_on: {db: {condition: service_healthy}}
+    logging: *logging
+  backend:
+    image: ${BACKEND_IMAGE:-exam-backend:local}
+    build: {context: ., dockerfile: backend/Dockerfile}
+    environment: *backend-env
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 40s
+    volumes: ["app_logs:/app/logs", "app_settings:/app/storage"]
+    depends_on: {migrate: {condition: service_completed_successfully}}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3108/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    logging: *logging
+  web:
+    image: ${WEB_IMAGE:-exam-web:local}
+    build: {context: ., dockerfile: frontend/Dockerfile}
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports: ["${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-80}:80", "${HTTP_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443"]
+    volumes: ["caddy_data:/data", "caddy_config:/config"]
+    depends_on: {backend: {condition: service_healthy}}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+    logging: *logging
+volumes:
+  mysql_data:
+  app_logs:
+  app_settings:
+  caddy_data:
+  caddy_config:

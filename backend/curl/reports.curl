@@ -1,0 +1,39 @@
+# ADMIN: dùng cookie từ auth.curl; thay <ROUND_ID> bằng UUID đợt test.
+# [Thành công tối giản] Dashboard, bảng và câu hỏi; mặc định chính thức.
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/statistics' -b admin.cookies.txt
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results' -b admin.cookies.txt
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/question-statistics' -b admin.cookies.txt
+curl -f 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/export' -b admin.cookies.txt -o bao-cao.xlsx
+# [Đầy đủ] Dùng cùng bộ lọc cho cả bốn endpoint; Excel bỏ qua phân trang.
+curl -G 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results' -b admin.cookies.txt --data-urlencode 'partyCommittee=Đảng bộ A' --data-urlencode 'partyBranch=Chi bộ A' --data-urlencode 'search=Nguyễn' --data-urlencode 'result=PASSED' --data-urlencode 'isTrial=false' --data-urlencode 'page=1' --data-urlencode 'limit=20'
+curl -G 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/statistics' -b admin.cookies.txt --data-urlencode 'partyCommittee=Đảng bộ A' --data-urlencode 'result=PASSED' --data-urlencode 'isTrial=false' --data-urlencode 'partyBranch=Chi bộ A' --data-urlencode 'search=Nguyễn'
+curl -G 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/question-statistics' -b admin.cookies.txt --data-urlencode 'partyCommittee=Đảng bộ A' --data-urlencode 'result=PASSED' --data-urlencode 'sort=correctRate' --data-urlencode 'order=asc' --data-urlencode 'page=1' --data-urlencode 'limit=20' --data-urlencode 'partyBranch=Chi bộ A' --data-urlencode 'search=Nguyễn' --data-urlencode 'isTrial=false'
+curl -fG 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/export' -b admin.cookies.txt --data-urlencode 'partyCommittee=Đảng bộ A' --data-urlencode 'result=PASSED' --data-urlencode 'sort=correctRate' --data-urlencode 'order=asc' -o bao-cao-da-loc.xlsx --data-urlencode 'partyBranch=Chi bộ A' --data-urlencode 'search=Nguyễn' --data-urlencode 'isTrial=false'
+# [Chạy thử] Chọn riêng, không cộng chung với chính thức; áp dụng được cả bốn endpoint.
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results?isTrial=true' -b admin.cookies.txt
+# [422] Bộ lọc/UUID không hợp lệ, tương tự cho cả bốn endpoint.
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/statistics?isTrial=1' -b admin.cookies.txt
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results?result=PASS' -b admin.cookies.txt
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/question-statistics?sort=invalid' -b admin.cookies.txt
+curl -i 'http://localhost:3108/api/admin/exam-rounds/invalid/export' -b admin.cookies.txt
+# [401/403] Không phiên, phiên hết hạn, USER (test mỗi đường dẫn statistics/results/question-statistics/export).
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/statistics'
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results' -b expired.cookies.txt
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/question-statistics' -b user.cookies.txt
+curl -i 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/export' -b user.cookies.txt
+# [404] Đợt không tồn tại; tương tự cho cả bốn endpoint.
+curl -i 'http://localhost:3108/api/admin/exam-rounds/11111111-1111-4111-8111-111111111111/results' -b admin.cookies.txt
+# Xóa lượt thử: API giai đoạn 4; chỉ chạy trên đợt test dùng một lần, có CSRF/xác nhận.
+curl -i -X DELETE 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/trial-data' -b admin.cookies.txt -H 'Content-Type: application/json' -H 'X-CSRF-Token: <CSRF_TOKEN>' -d '{"confirm":true}'
+
+# Theo đảng bộ: NFC/khoảng trắng/hoa-thường, tách dấu tiếng Việt; phân trang và cùng lọc báo cáo.
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics" --cookie admin.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics?page=1&limit=20&isTrial=true&result=PASSED" --cookie admin.cookies.txt
+# Bấm nhóm dùng committeeKey trả từ API, lọc chính xác cùng tập người/Excel.
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results?committeeKey=<COMMITTEE_KEY>" --cookie admin.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/export?committeeKey=<COMMITTEE_KEY>&isTrial=false" --cookie admin.cookies.txt --output bao-cao-dang-bo.xlsx
+# Validation 422 / security 401 và 403
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics?committeeKey=invalid" --cookie admin.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics"
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics" --cookie expired.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics" --cookie user.cookies.txt

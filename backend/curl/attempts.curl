@@ -1,0 +1,119 @@
+# Lượt thi (USER/người dự thi). Dùng auth.curl lấy cookie và CSRF.
+# Chỉ thao tác đợt test E2E_ROUND_. Thay các placeholder UUID.
+
+# Start mới 201 hoặc resume 200, không tăng lượt
+curl --request POST "http://localhost:3108/api/exam-rounds/<ROUND_ID>/start" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Lấy đề snapshot và đáp án đã lưu; không có đáp án đúng
+curl --request GET "http://localhost:3108/api/attempts/<ATTEMPT_ID>" --cookie participant.cookies.txt
+
+# Lưu một đáp án
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": "A"}]}'
+
+# Lưu nhiều câu một transaction
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<QUESTION_ID_1>", "selectedAnswer": "B"}, {"attemptQuestionId": "<QUESTION_ID_2>", "selectedAnswer": "C"}]}'
+
+# Bỏ chọn đáp án
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": null}]}'
+
+# Nộp bài 200; gọi lại cùng request không chấm lại
+curl --request POST "http://localhost:3108/api/attempts/<ATTEMPT_ID>/submit" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Validation 422: start không cho tự chọn user hoặc đề
+curl --request POST "http://localhost:3108/api/exam-rounds/<ROUND_ID>/start" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"userId": "<OTHER_USER_ID>"}'
+
+# Validation 422: thiếu answers
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Validation 422: sai lựa chọn
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": "X"}]}'
+
+# Validation 422: trùng câu
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": "A"}, {"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": "B"}]}'
+
+# Validation 422: submit không nhận đáp án kèm theo
+curl --request POST "http://localhost:3108/api/attempts/<ATTEMPT_ID>/submit" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": []}'
+
+# Validation 422: sai định danh
+curl --request GET "http://localhost:3108/api/attempts/invalid" --cookie participant.cookies.txt
+
+# Chưa đăng nhập 401: POST
+curl --request POST "http://localhost:3108/api/exam-rounds/<ROUND_ID>/start" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: POST
+curl --request POST "http://localhost:3108/api/exam-rounds/<ROUND_ID>/start" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# ADMIN không được dự thi 403: POST
+curl --request POST "http://localhost:3108/api/exam-rounds/<ROUND_ID>/start" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401: GET
+curl --request GET "http://localhost:3108/api/attempts/<ATTEMPT_ID>"
+
+# Phiên hết hạn 401: GET
+curl --request GET "http://localhost:3108/api/attempts/<ATTEMPT_ID>" --cookie expired.cookies.txt
+
+# ADMIN không được dự thi 403: GET
+curl --request GET "http://localhost:3108/api/attempts/<ATTEMPT_ID>" --cookie admin.cookies.txt
+
+# Chưa đăng nhập 401: PUT
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": "A"}]}'
+
+# Phiên hết hạn 401: PUT
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": "A"}]}'
+
+# ADMIN không được dự thi 403: PUT
+curl --request PUT "http://localhost:3108/api/attempts/<ATTEMPT_ID>/answers" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<ATTEMPT_QUESTION_ID>", "selectedAnswer": "A"}]}'
+
+# Chưa đăng nhập 401: POST
+curl --request POST "http://localhost:3108/api/attempts/<ATTEMPT_ID>/submit" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: POST
+curl --request POST "http://localhost:3108/api/attempts/<ATTEMPT_ID>/submit" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# ADMIN không được dự thi 403: POST
+curl --request POST "http://localhost:3108/api/attempts/<ATTEMPT_ID>/submit" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# IDOR 403: người dự thi khác sở hữu lượt này.
+curl --request GET "http://localhost:3108/api/attempts/<OTHER_ATTEMPT_ID>" --cookie participant.cookies.txt
+
+# IDOR 403: người dự thi khác sở hữu lượt này.
+curl --request PUT "http://localhost:3108/api/attempts/<OTHER_ATTEMPT_ID>/answers" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"answers": [{"attemptQuestionId": "<OTHER_QUESTION_ID>", "selectedAnswer": "A"}]}'
+
+# IDOR 403: người dự thi khác sở hữu lượt này.
+curl --request POST "http://localhost:3108/api/attempts/<OTHER_ATTEMPT_ID>/submit" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# 409: start khi hết lượt/đã PASS và stopAfterPass=true/đợt CLOSED/ngoài lịch/không đủ câu.
+# 409: lưu đáp án sau khi đã nộp hoặc hết giờ. Chốt hết giờ vẫn được commit trước khi trả lỗi.
+# Start nhiều request đồng thời phải trả cùng ID khi đang làm, không tăng lượt.
+# Thử submit lại sau hết giờ phải trả cùng kết quả, không chấm lại.
+# Dữ liệu chạy thử: cấu hình trialStartAt/startAt của đợt trước bằng API quản trị;
+# start trong khoảng thử phải có isTrial=true và expiresAt không vượt startAt.
+
+# Giai đoạn 6: thay <ATTEMPT_ID>, <ROUND_ID>; cookie từ auth.curl.
+# Thành công: lượt đã nộp/hết giờ; chỉ có correctAnswer nếu snapshot cho phép.
+curl -i 'http://localhost:3108/api/attempts/<ATTEMPT_ID>/result' -b cookies.txt
+# 409: lượt đang làm, không trả đề/đáp án đúng.
+curl -i 'http://localhost:3108/api/attempts/<ACTIVE_ATTEMPT_ID>/result' -b cookies.txt
+# 422: UUID sai.
+curl -i 'http://localhost:3108/api/attempts/invalid/result' -b cookies.txt
+# 401: chưa đăng nhập; 403: cookie ADMIN hoặc lượt của USER khác.
+curl -i 'http://localhost:3108/api/attempts/<ATTEMPT_ID>/result'
+curl -i 'http://localhost:3108/api/attempts/<OTHER_USER_ATTEMPT_ID>/result' -b cookies.txt
+curl -i 'http://localhost:3108/api/attempts/<ATTEMPT_ID>/result' -b admin-cookies.txt
+
+# Chạy thử có ràng buộc phía server: không thể vô tình tạo lượt chính thức khi hết cửa sổ thử.
+# 201/200 nếu đang chạy thử; 409 nếu chưa thử/đã tới giờ chính thức/đã đóng/hết lượt.
+curl --request POST "http://localhost:3108/api/exam-rounds/<ROUND_ID>/start" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"trialOnly":true}'
+# 422: trialOnly sai kiểu; 401/403 theo endpoint start thông thường phía trên.
+curl --request POST "http://localhost:3108/api/exam-rounds/<ROUND_ID>/start" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"trialOnly":"true"}'
+
+# Giai đoạn 12: nộp gửi toàn bộ lựa chọn, kể cả null; ghi + chấm trong cùng transaction.
+# Gọi lại sau SUBMITTED trả cùng kết quả, không ghi đè đáp án đã chốt.
+curl --request POST 'http://localhost:3108/api/attempts/<ATTEMPT_ID>/submit' --cookie user.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"answers":[{"attemptQuestionId":"<ATTEMPT_QUESTION_ID>","selectedAnswer":"A"},{"attemptQuestionId":"<OTHER_ATTEMPT_QUESTION_ID>","selectedAnswer":null}]}'
+
+# 422: câu không thuộc lượt hoặc lựa chọn không tồn tại; toàn bộ request rollback.
+curl --request POST 'http://localhost:3108/api/attempts/<ATTEMPT_ID>/submit' --cookie user.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"answers":[{"attemptQuestionId":"00000000-0000-0000-0000-000000000000","selectedAnswer":"A"}]}'
+
+# 409 ATTEMPT_EXPIRED: sau hạn + sai lệch cho phép, chỉ chấm dữ liệu đã lưu trước đó.
+# Sau 409 dùng GET /attempts/:id/result để xem kết quả đã chốt.
+curl --request POST 'http://localhost:3108/api/attempts/<EXPIRED_ATTEMPT_ID>/submit' --cookie user.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"answers":[{"attemptQuestionId":"<ATTEMPT_QUESTION_ID>","selectedAnswer":"A"}]}'

@@ -1,0 +1,3 @@
+const {auditLog}=require('../../utils/audit-log');
+exports.history=async(req,res,next)=>{try{const data=await require('./attempts.admin.service').history(req.params.id,req.params.userId,req.query);auditLog(req,'info',{event:'admin_participant_history_viewed',examRoundId:req.params.id,targetUserId:req.params.userId});res.set('Cache-Control','no-store').json(data);}catch(error){next(error);}};
+exports.get=async(req,res,next)=>{try{const data=await require('./attempts.service').getForAdmin(req.params.id);auditLog(req,'info',{event:'admin_attempt_viewed',attemptId:req.params.id});res.set('Cache-Control','no-store').json(data);}catch(error){next(error);}};

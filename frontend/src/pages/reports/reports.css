@@ -1,0 +1,6 @@
+.report-workspace {display:flex;flex-direction:column;gap:16px;width:100%;max-width:100%;min-width:0;}
+.report-workspace>* {min-width:0;max-width:100%;}
+.report-workspace .ant-space-item {min-width:0;max-width:100%;}
+.report-workspace .ant-statistic-title {overflow-wrap:anywhere;}
+.report-workspace .ant-tag {white-space:normal;overflow-wrap:anywhere;}
+.report-workspace>.ant-row {margin-inline:0!important;}

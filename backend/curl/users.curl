@@ -1,0 +1,125 @@
+# Quản lý tài khoản; chạy auth.curl để lấy admin.cookies.txt và CSRF token.
+# Chỉ dùng tài khoản test; thay các placeholder trước khi chạy.
+
+# Thành công: danh sách phân trang
+curl --request GET "http://localhost:3108/api/admin/users?page=1&limit=20" --cookie admin.cookies.txt
+
+# Thành công: tìm kiếm
+curl --request GET "http://localhost:3108/api/admin/users?search=e2e_" --cookie admin.cookies.txt
+
+# Thành công: chi tiết
+curl --request GET "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt
+
+# Thành công: tạo tối thiểu
+curl --request POST "http://localhost:3108/api/admin/users" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"username":"e2e_user_min","fullName":"Người dùng test","password":"valid-secret-123"}'
+
+# Thành công: tạo đầy đủ
+curl --request POST "http://localhost:3108/api/admin/users" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"username":"e2e_user_full","fullName":"Người dùng test","password":"valid-secret-123","role":"USER","isActive":true}'
+
+# Thành công: sửa họ tên
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"fullName":"Tên mới"}'
+
+# Thành công: sửa đầy đủ, đặt lại mật khẩu
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"fullName":"Tên mới","role":"USER","isActive":true,"password":"different-secret-123"}'
+
+# Thành công: khóa
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"isActive":false}'
+
+# Thành công: mở khóa
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"isActive":true}'
+
+# Thành công: xóa mềm
+curl --request DELETE "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# Validation 422: thiếu trường
+curl --request POST "http://localhost:3108/api/admin/users" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Validation 422: sai vai trò
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"role":"ROOT"}'
+
+# Validation 422: sai trạng thái
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"isActive":"false"}'
+
+# Xung đột 409: tự khóa
+curl --request PATCH "http://localhost:3108/api/admin/users/<CURRENT_ADMIN_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"isActive":false}'
+
+# Xung đột 409: hạ quyền ADMIN cuối cùng
+curl --request PATCH "http://localhost:3108/api/admin/users/<LAST_ADMIN_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"role":"USER"}'
+
+# Không tìm thấy 404
+curl --request GET "http://localhost:3108/api/admin/users/<MISSING_USER_ID>" --cookie admin.cookies.txt
+
+# Chưa đăng nhập 401: GET
+curl --request GET "http://localhost:3108/api/admin/users"
+
+# Phiên hết hạn 401: GET
+curl --request GET "http://localhost:3108/api/admin/users" --cookie expired.cookies.txt
+
+# USER không đủ quyền 403: GET
+curl --request GET "http://localhost:3108/api/admin/users" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: GET
+curl --request GET "http://localhost:3108/api/admin/users/<USER_ID>"
+
+# Phiên hết hạn 401: GET
+curl --request GET "http://localhost:3108/api/admin/users/<USER_ID>" --cookie expired.cookies.txt
+
+# USER không đủ quyền 403: GET
+curl --request GET "http://localhost:3108/api/admin/users/<USER_ID>" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: POST
+curl --request POST "http://localhost:3108/api/admin/users" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Phiên hết hạn 401: POST
+curl --request POST "http://localhost:3108/api/admin/users" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# USER không đủ quyền 403: POST
+curl --request POST "http://localhost:3108/api/admin/users" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401: PATCH
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"fullName":"Tên"}'
+
+# Phiên hết hạn 401: PATCH
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"fullName":"Tên"}'
+
+# USER không đủ quyền 403: PATCH
+curl --request PATCH "http://localhost:3108/api/admin/users/<USER_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"fullName":"Tên"}'
+
+# Chưa đăng nhập 401: DELETE
+curl --request DELETE "http://localhost:3108/api/admin/users/<USER_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# Phiên hết hạn 401: DELETE
+curl --request DELETE "http://localhost:3108/api/admin/users/<USER_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# USER không đủ quyền 403: DELETE
+curl --request DELETE "http://localhost:3108/api/admin/users/<USER_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# Tải mẫu Excel tài khoản (ADMIN).
+curl --request GET "http://localhost:3108/api/admin/users/template" --cookie admin.cookies.txt --output mau-tai-khoan.xlsx
+
+# Xem trước: không ghi dữ liệu; mật khẩu không trả về trong preview.
+curl --request POST "http://localhost:3108/api/admin/users/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=preview" --form "file=@<USERS_FILE.xlsx>"
+
+# Xác nhận: gửi lại đúng file và previewToken; tạo toàn bộ hoặc rollback.
+curl --request POST "http://localhost:3108/api/admin/users/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=commit" --form "previewToken=<PREVIEW_TOKEN>" --form "file=@<USERS_FILE.xlsx>"
+
+# Validation 422: chưa xem trước hoặc thiếu token.
+curl --request POST "http://localhost:3108/api/admin/users/import" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=commit" --form "file=@<USERS_FILE.xlsx>"
+
+# Validation: preview file thiếu ten_dang_nhap/ho_ten/mat_khau, mật khẩu dưới 6 ký tự,
+# vai_tro sai hoặc ten_dang_nhap trùng trong file. Sửa file, xem trước lại rồi xác nhận.
+# Xung đột 409: sau preview, tạo tài khoản cùng username rồi commit; phải rollback toàn bộ.
+# Bảo mật 401: chưa đăng nhập.
+curl --request GET "http://localhost:3108/api/admin/users/template"
+
+curl --request POST "http://localhost:3108/api/admin/users/import" --form "mode=preview" --form "file=@<USERS_FILE.xlsx>"
+
+# Bảo mật 403: USER không được tải mẫu/import.
+curl --request GET "http://localhost:3108/api/admin/users/template" --cookie user.cookies.txt
+
+curl --request POST "http://localhost:3108/api/admin/users/import" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=preview" --form "file=@<USERS_FILE.xlsx>"
+
+# Phiên hết hạn 401.
+curl --request GET "http://localhost:3108/api/admin/users/template" --cookie expired.cookies.txt
+
+curl --request POST "http://localhost:3108/api/admin/users/import" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --form "mode=preview" --form "file=@<USERS_FILE.xlsx>"

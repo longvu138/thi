@@ -1,0 +1,13 @@
+const {candidateLimiter}=require('../../middlewares/rate-limit.middleware');
+const express = require('express');
+const { authenticate, requireRole } = require('../../middlewares/auth.middleware');
+const controller = require('./attempts.controller');
+const router = express.Router();
+router.use(authenticate, requireRole('USER'), candidateLimiter);
+router.use((req, res, next) => { req.sensitiveBody = true; res.set('Cache-Control', 'no-store'); next(); });
+router.get('/:id/receipt', require('../receipts/receipts.controller').get);
+router.get('/:id/result', controller.result);
+router.get('/:id', controller.get);
+router.put('/:id/answers', controller.answers);
+router.post('/:id/submit', controller.submit);
+module.exports = router;

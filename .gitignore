@@ -1,0 +1,50 @@
+# Runtime output
+logs/
+*.log
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+*.cookies.txt
+*.pem
+*.key
+
+# Build output
+dist/
+build/
+coverage/
+
+# Playwright output
+frontend/test-results/
+frontend/playwright-report/
+
+# Local contest deliverables (not part of application source)
+contest-evidence/
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/
+.pnpm-store/
+.agents/
+.codex/
+# VPS private config and exported database backups
+data/
+*.sql
+*.sql.gz
+*.sql.gz.sha256
+deploy/.env
+__pycache__/
+
+# Local persisted application settings (Docker uses a named volume)
+backend/storage/
+
+# Tài liệu nguồn và file trung gian của người dùng (không thuộc source ứng dụng)
+/*.pdf
+/outputs/

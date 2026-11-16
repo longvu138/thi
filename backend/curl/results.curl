@@ -1,0 +1,21 @@
+# Kết quả cá nhân: dùng cookie USER từ auth.curl; không nhận userId từ client.
+# Thành công tối giản: danh sách đợt, kể cả chưa thi; kết quả cuối chỉ tính chính thức.
+curl -i 'http://localhost:3108/api/my-results' -b cookies.txt
+# Thành công đầy đủ: lịch sử phân trang của một đợt, gồm lượt thử có nhãn isTrial.
+curl -i 'http://localhost:3108/api/my-results?examRoundId=<ROUND_ID>&page=1&limit=20' -b cookies.txt
+# 422: mã đợt sai định dạng. 404: UUID hợp lệ nhưng đợt không tồn tại.
+curl -i 'http://localhost:3108/api/my-results?examRoundId=invalid' -b cookies.txt
+curl -i 'http://localhost:3108/api/my-results?examRoundId=11111111-1111-4111-8111-111111111111' -b cookies.txt
+# 401: không có phiên / cookie hết hạn; 403: ADMIN.
+curl -i 'http://localhost:3108/api/my-results'
+curl -i 'http://localhost:3108/api/my-results' -b expired-cookies.txt
+curl -i 'http://localhost:3108/api/my-results' -b admin-cookies.txt
+
+# Phiếu kết quả theo lượt (USER sở hữu; 401 thiếu phiên, 403 USER khác/ADMIN)
+curl --request GET "http://localhost:3108/api/attempts/<ATTEMPT_ID>/receipt" --cookie user.cookies.txt
+curl --request GET "http://localhost:3108/api/attempts/<ATTEMPT_ID>/receipt"
+curl --request GET "http://localhost:3108/api/attempts/<OTHER_USER_ATTEMPT_ID>/receipt" --cookie user.cookies.txt
+curl --request GET "http://localhost:3108/api/attempts/<ATTEMPT_ID>/receipt" --cookie admin.cookies.txt
+# 422 UUID sai; 404 không tồn tại; 409 đang làm bài
+curl --request GET "http://localhost:3108/api/attempts/invalid/receipt" --cookie user.cookies.txt
+curl --request GET "http://localhost:3108/api/attempts/<IN_PROGRESS_ATTEMPT_ID>/receipt" --cookie user.cookies.txt

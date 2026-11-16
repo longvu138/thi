@@ -1,0 +1,17 @@
+# Tra cứu phiếu bằng mã: không cần tài khoản/cookie. Đây là POST chỉ đọc, không ghi dữ liệu nên không cần CSRF.
+# Mã giữ riêng tư, không đặt trong URL/log. Có mã thì xem được thông tin trên phiếu.
+# Thành công tối thiểu/đầy đủ (chỉ nhận trường code); không nhận userId/attemptId.
+curl --request POST "http://localhost:3108/api/receipts/lookup" --header "Content-Type: application/json" --data '{"code":"<MA_TREN_PHIEU>"}'
+# Cũng hỗ trợ chữ thường, khoảng trắng hoặc không có dấu gạch.
+curl --request POST "http://localhost:3108/api/receipts/lookup" --header "Content-Type: application/json" --data '{"code":"<ma_khong_gach>"}'
+# 422 thiếu mã / sai định dạng / trường dư
+curl --request POST "http://localhost:3108/api/receipts/lookup" --header "Content-Type: application/json" --data '{}'
+curl --request POST "http://localhost:3108/api/receipts/lookup" --header "Content-Type: application/json" --data '{"code":"invalid"}'
+curl --request POST "http://localhost:3108/api/receipts/lookup" --header "Content-Type: application/json" --data '{"code":"<MA_TREN_PHIEU>","userId":"<USER_ID>"}'
+# 404 mã đúng định dạng nhưng không tồn tại
+curl --request POST "http://localhost:3108/api/receipts/lookup" --header "Content-Type: application/json" --data '{"code":"0000-0000-0000-0000-0000"}'
+# Bảo mật: không có mã không được lấy phiếu; GET không hỗ trợ (404), không có API liệt kê phiếu công khai.
+curl --request GET "http://localhost:3108/api/receipts/lookup"
+# Có hoặc không có cookie đều chỉ tra đúng phiếu của mã; ADMIN không được tìm người qua endpoint này.
+curl --request POST "http://localhost:3108/api/receipts/lookup" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"code":"<MA_TREN_PHIEU>"}'
+# Quá 30 request/IP/15 phút trả 429. Response no-store; không trả đề/đáp án/ID tài khoản.

@@ -1,0 +1,37 @@
+# ADMIN: cơ cấu đề. Không dùng API chia đề/tạo bộ đề cũ.
+# GET: cơ cấu hiện tại, questionCount, locked, mọi nhóm/validCount/count/order/isNew.
+curl --request GET 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie admin.cookies.txt
+
+# PUT tối giản: RANDOM, count là số Admin nhập; selection_config chỉ lưu mode/groups.
+curl --request PUT 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"RANDOM","count":50}'
+
+# PUT đầy đủ BY_GROUP: Backend tính tổng 6; nhóm 0 không vào đề, thứ tự theo order.
+curl --request PUT 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"BY_GROUP","groups":[{"category":"Nghị quyết 1","count":3,"order":0},{"category":"Nghị quyết 2","count":3,"order":1},{"category":"Nghị quyết 3","count":0,"order":2}]}'
+
+# POST xem mẫu từ cơ cấu đang nhập, chưa cần lưu. Không tạo lượt/ghi DB; có audit, ADMIN thấy đáp án đúng.
+curl --request POST 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure/preview' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"RANDOM","count":50}'
+curl --request POST 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure/preview' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"BY_GROUP","groups":[{"category":"Nghị quyết 1","count":3,"order":0}]}'
+
+# 422: thiếu dữ liệu, số âm, vượt câu nhóm. Response groupErrors có category/message/count/available.
+curl --request PUT 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{}'
+curl --request PUT 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"BY_GROUP","groups":[{"category":"Nghị quyết 1","count":-1,"order":0}]}'
+curl --request POST 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure/preview' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"BY_GROUP","groups":[{"category":"Nghị quyết 1","count":9999,"order":0}]}'
+curl --request GET 'http://localhost:3108/api/admin/exam-rounds/invalid/structure' --cookie admin.cookies.txt
+
+# 409: đã có lượt chính thức. Lượt chạy thử không khóa; không thể bỏ khóa bằng cách đóng đợt.
+curl --request PUT 'http://localhost:3108/api/admin/exam-rounds/<ROUND_WITH_OFFICIAL_ATTEMPTS>/structure' --cookie admin.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"RANDOM","count":50}'
+
+# 401: chưa có phiên hoặc hết hạn (không gửi cookie vào các lệnh ghi không đăng nhập).
+curl --request GET 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure'
+curl --request GET 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie expired.cookies.txt
+
+curl --request PUT 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --header 'Content-Type: application/json' --data '{"mode":"RANDOM","count":50}'
+curl --request POST 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure/preview' --header 'Content-Type: application/json' --data '{"mode":"RANDOM","count":50}'
+
+# 403: USER không được xem cơ cấu Admin, sửa hoặc xem mẫu/đáp án.
+curl --request GET 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie user.cookies.txt
+curl --request PUT 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure' --cookie user.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"RANDOM","count":50}'
+curl --request POST 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/structure/preview' --cookie user.cookies.txt --header 'X-CSRF-Token: <CSRF_TOKEN>' --header 'Content-Type: application/json' --data '{"mode":"RANDOM","count":50}'
+
+# 404: round UUID đúng định dạng nhưng không tồn tại.
+curl --request GET 'http://localhost:3108/api/admin/exam-rounds/00000000-0000-0000-0000-000000000000/structure' --cookie admin.cookies.txt

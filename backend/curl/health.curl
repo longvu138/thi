@@ -1,0 +1,8 @@
+# Health check
+curl --location 'http://localhost:3108/api/health'
+
+
+# Handshake thử tải chỉ đọc: server QA DB exam_load_test_* và LOAD_TEST_ENABLED=true mới chấp nhận.
+# Thành công có header X-Load-Test-Database khớp; server thật/tên DB khác/tắt flag => 403.
+curl --include "http://localhost:3189/api/health" --header "X-Load-Test-Database: exam_load_test_local"
+curl --include "http://localhost:3189/api/health" --header "X-Load-Test-Database: exam"

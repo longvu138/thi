@@ -1,0 +1,183 @@
+# Đợt kiểm tra. Dùng auth.curl lấy admin.cookies.txt / user.cookies.txt và CSRF.
+# Chỉ tạo/xóa dữ liệu test E2E_ROUND_; thay các placeholder. Không chạy trên dữ liệu thật.
+
+# Danh sách ADMIN phân trang
+curl --request GET "http://localhost:3108/api/admin/exam-rounds?page=1&limit=20" --cookie admin.cookies.txt
+
+# Tìm và lọc trạng thái
+curl --request GET "http://localhost:3108/api/admin/exam-rounds?search=E2E_ROUND&status=OPEN" --cookie admin.cookies.txt
+
+# Chi tiết ADMIN
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt
+
+# Tạo tối thiểu: DRAFT
+curl --request POST "http://localhost:3108/api/admin/exam-rounds" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Tối thiểu", "durationMinutes": 30, "maxAttempts": 2}'
+
+# Tạo đầy đủ cấu hình
+curl --request POST "http://localhost:3108/api/admin/exam-rounds" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Đầy đủ", "durationMinutes": 30, "maxAttempts": 2, "description": "Đợt kiểm thử", "passingPercentage": 70, "stopAfterPass": false, "showCorrectAnswers": true, "shuffleQuestions": true, "shuffleOptions": true, "startAt": "2026-11-10T08:00:00+07:00", "endAt": "2026-11-10T10:00:00+07:00", "status": "DRAFT"}'
+
+# Sửa tối thiểu
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Đổi tên"}'
+
+# Sửa đầy đủ
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Đầy đủ", "durationMinutes": 30, "maxAttempts": 2, "description": "Đợt kiểm thử", "passingPercentage": 70, "stopAfterPass": false, "showCorrectAnswers": true, "shuffleQuestions": true, "shuffleOptions": true, "startAt": "2026-11-10T08:00:00+07:00", "endAt": "2026-11-10T10:00:00+07:00", "status": "DRAFT"}'
+
+# Mở đợt: phải đủ câu hợp lệ
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"status": "OPEN"}'
+
+# Đóng đợt
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"status": "CLOSED"}'
+
+# Xóa giới hạn thời gian
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"startAt": null, "endAt": null}'
+
+# Xóa đợt chưa có lượt thi
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<UNUSED_ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# Validation 422: thiếu trường
+curl --request POST "http://localhost:3108/api/admin/exam-rounds" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Validation 422: sai số câu
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"questionCount": 0}'
+
+# Validation 422: sai thời lượng
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"durationMinutes": 1.5}'
+
+# Validation 422: sai số lượt
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"maxAttempts": 0}'
+
+# Validation 422: sai ngưỡng đạt
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"passingPercentage": 101}'
+
+# Validation 422: không còn nhận trường chọn nhóm categoryIds
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"categoryIds": []}'
+
+# Validation 422: khoảng thời gian đảo ngược
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"startAt": "2026-11-10T10:00:00+07:00", "endAt": "2026-11-10T08:00:00+07:00"}'
+
+# Validation 422: thời gian không có múi giờ
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"startAt": "2026-11-10T08:00:00"}'
+
+# Validation 422: trạng thái sai
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"status": "INVALID"}'
+
+# Validation 422: trạng thái lọc sai
+curl --request GET "http://localhost:3108/api/admin/exam-rounds?status=INVALID" --cookie admin.cookies.txt
+
+# Validation 422: định danh sai
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/invalid" --cookie admin.cookies.txt
+
+# Xung đột 409: mở đợt không đủ câu của chính đợt
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"status": "OPEN"}'
+
+# Xung đột 409: xóa đợt đã có lượt thi
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_WITH_ATTEMPTS_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# Chưa đăng nhập 401: GET /admin/exam-rounds
+curl --request GET "http://localhost:3108/api/admin/exam-rounds"
+
+# Phiên hết hạn 401: GET /admin/exam-rounds
+curl --request GET "http://localhost:3108/api/admin/exam-rounds" --cookie expired.cookies.txt
+
+# USER thiếu quyền 403: GET /admin/exam-rounds
+curl --request GET "http://localhost:3108/api/admin/exam-rounds" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: GET /admin/exam-rounds/<ROUND_ID>
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>"
+
+# Phiên hết hạn 401: GET /admin/exam-rounds/<ROUND_ID>
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie expired.cookies.txt
+
+# USER thiếu quyền 403: GET /admin/exam-rounds/<ROUND_ID>
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie user.cookies.txt
+
+# Chưa đăng nhập 401: POST /admin/exam-rounds
+curl --request POST "http://localhost:3108/api/admin/exam-rounds" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Tối thiểu", "durationMinutes": 30, "maxAttempts": 2}'
+
+# Phiên hết hạn 401: POST /admin/exam-rounds
+curl --request POST "http://localhost:3108/api/admin/exam-rounds" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Tối thiểu", "durationMinutes": 30, "maxAttempts": 2}'
+
+# USER thiếu quyền 403: POST /admin/exam-rounds
+curl --request POST "http://localhost:3108/api/admin/exam-rounds" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Tối thiểu", "durationMinutes": 30, "maxAttempts": 2}'
+
+# Chưa đăng nhập 401: PATCH /admin/exam-rounds/<ROUND_ID>
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "Test"}'
+
+# Phiên hết hạn 401: PATCH /admin/exam-rounds/<ROUND_ID>
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "Test"}'
+
+# USER thiếu quyền 403: PATCH /admin/exam-rounds/<ROUND_ID>
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "Test"}'
+
+# Chưa đăng nhập 401: PUT /admin/exam-rounds/<ROUND_ID>
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Đầy đủ", "durationMinutes": 30, "maxAttempts": 2, "description": "Đợt kiểm thử", "passingPercentage": 70, "stopAfterPass": false, "showCorrectAnswers": true, "shuffleQuestions": true, "shuffleOptions": true, "startAt": "2026-11-10T08:00:00+07:00", "endAt": "2026-11-10T10:00:00+07:00", "status": "DRAFT"}'
+
+# Phiên hết hạn 401: PUT /admin/exam-rounds/<ROUND_ID>
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Đầy đủ", "durationMinutes": 30, "maxAttempts": 2, "description": "Đợt kiểm thử", "passingPercentage": 70, "stopAfterPass": false, "showCorrectAnswers": true, "shuffleQuestions": true, "shuffleOptions": true, "startAt": "2026-11-10T08:00:00+07:00", "endAt": "2026-11-10T10:00:00+07:00", "status": "DRAFT"}'
+
+# USER thiếu quyền 403: PUT /admin/exam-rounds/<ROUND_ID>
+curl --request PUT "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"title": "E2E_ROUND_Đầy đủ", "durationMinutes": 30, "maxAttempts": 2, "description": "Đợt kiểm thử", "passingPercentage": 70, "stopAfterPass": false, "showCorrectAnswers": true, "shuffleQuestions": true, "shuffleOptions": true, "startAt": "2026-11-10T08:00:00+07:00", "endAt": "2026-11-10T10:00:00+07:00", "status": "DRAFT"}'
+
+# Chưa đăng nhập 401: DELETE /admin/exam-rounds/<ROUND_ID>
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# Phiên hết hạn 401: DELETE /admin/exam-rounds/<ROUND_ID>
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# USER thiếu quyền 403: DELETE /admin/exam-rounds/<ROUND_ID>
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie user.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>"
+
+# USER đọc đợt OPEN/CLOSED; DRAFT trả 404; định danh sai trả 422.
+curl "http://localhost:3108/api/exam-rounds" --cookie user.cookies.txt
+
+# USER đọc đợt OPEN/CLOSED; DRAFT trả 404; định danh sai trả 422.
+curl "http://localhost:3108/api/exam-rounds?page=1&limit=20&status=OPEN&search=E2E_ROUND" --cookie user.cookies.txt
+
+# USER đọc đợt OPEN/CLOSED; DRAFT trả 404; định danh sai trả 422.
+curl "http://localhost:3108/api/exam-rounds/<ROUND_ID>" --cookie user.cookies.txt
+
+# USER đọc đợt OPEN/CLOSED; DRAFT trả 404; định danh sai trả 422.
+curl "http://localhost:3108/api/exam-rounds/<DRAFT_ROUND_ID>" --cookie user.cookies.txt
+
+# USER đọc đợt OPEN/CLOSED; DRAFT trả 404; định danh sai trả 422.
+curl "http://localhost:3108/api/exam-rounds/invalid" --cookie user.cookies.txt
+
+# USER chưa đăng nhập 401.
+curl "http://localhost:3108/api/exam-rounds"
+
+# USER phiên hết hạn 401.
+curl "http://localhost:3108/api/exam-rounds" --cookie expired.cookies.txt
+
+# USER chưa đăng nhập 401.
+curl "http://localhost:3108/api/exam-rounds/<ROUND_ID>"
+
+# USER phiên hết hạn 401.
+curl "http://localhost:3108/api/exam-rounds/<ROUND_ID>" --cookie expired.cookies.txt
+
+# CSRF sai 403, không sửa dữ liệu.
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: invalid" --header "Content-Type: application/json" --data '{"status":"OPEN"}'
+
+# Cấu hình chạy thử trước thời điểm chính thức (422 nếu không có startAt hoặc sai thứ tự).
+curl --request PATCH "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"trialStartAt":"2026-11-11T08:00:00+07:00","startAt":"2026-11-11T09:00:00+07:00","endAt":"2026-11-11T12:00:00+07:00"}'
+
+# Xóa dữ liệu thử 200: chỉ lượt thử và snapshot/đáp án của chúng; giữ mọi lượt chính thức.
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/trial-data" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"confirm":true}'
+
+# Thiếu xác nhận 422.
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/trial-data" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{}'
+
+# Chưa đăng nhập 401.
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/trial-data" --header "Content-Type: application/json" --data '{"confirm":true}'
+
+# USER thiếu quyền 403.
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/trial-data" --cookie participant.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"confirm":true}'
+
+# Phiên hết hạn 401.
+curl --request DELETE "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/trial-data" --cookie expired.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"confirm":true}'
+
+# Giai đoạn 10: API USER trả participation của chính người đang đăng nhập, không nhận userId để chọn người khác.
+# Có usedAttempts/maxAttempts/remainingAttempts, activeAttempt, finalResult, canStart/canResume, reasonCode/reason.
+curl --request GET "http://localhost:3108/api/exam-rounds?page=1&limit=20" --cookie user.cookies.txt
+curl --request GET "http://localhost:3108/api/exam-rounds/<ROUND_ID>" --cookie user.cookies.txt
+# API ADMIN có validQuestionCount; nút Mở/Đóng vẫn PATCH status, CSRF, kiểm đủ câu và audit như cũ.
+curl --request GET "http://localhost:3108/api/admin/exam-rounds?page=1&limit=20" --cookie admin.cookies.txt

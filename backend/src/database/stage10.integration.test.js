@@ -1,0 +1,66 @@
+const test=require('node:test'),assert=require('node:assert/strict');
+const name=process.env.TEST_STAGE10_DB_NAME;
+if(name&&!/^exam_stage10_test_[a-z0-9_]+$/.test(name))throw new Error('TEST_STAGE10_DB_NAME phải có tiền tố exam_stage10_test_');
+if(name)process.env.DB_NAME=name;
+process.env.JWT_SECRET='stage10-jwt-test-secret-long-value';process.env.CSRF_SECRET='stage10-csrf-test-secret-long-value';process.env.AUTH_COOKIE_SECURE='false';
+test('Giai đoạn 10: trạng thái riêng, đảng bộ chuẩn hóa, Excel và Admin xem snapshot chỉ đọc',{skip:!name&&'Chưa đặt TEST_STAGE10_DB_NAME cho database test riêng'},async t=>{
+ const db=require('../config/database'),foundation=require('./test-foundation'),receipts=require('./migrations/202611120001_attempt_receipts');
+ const users=require('../modules/users/users.service'),rounds=require('./test-rounds'),questions=require('../modules/questions/questions.service'),attempts=require('../modules/attempts/attempts.service');
+ const reports=require('../modules/reports/reports.service'),{keyFor}=require('../modules/reports/committees.service');
+ let migrated=false,server;const audits=[];const logger=require('../utils/logger'),info=logger.info;logger.info=function(payload,...args){audits.push(payload);return info.call(this,payload,...args);};
+ t.after(async()=>{logger.info=info;try{if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}if(migrated){await receipts.down(db);await foundation.down(db);}}finally{await db.destroy();}});
+ assert.equal((await db.raw('SHOW TABLES'))[0].length,0,'Chỉ chạy DB test rỗng');await foundation.up(db);migrated=true;await require('./migrations/202611110001_participant_identity').up(db);await receipts.up(db);
+ const makeUser=async(username,party,role='USER')=>{const user=await users.create({username,fullName:username,password:'123456',role});await db('users').where({id:user.id}).update({party_committee:party,party_branch:'E2E Chi bộ'});return user;};
+ const admin=await makeUser('e2e_stage10_admin','E2E Admin','ADMIN'),a=await makeUser('e2e_stage10_a',' E2E   ĐẢNG BỘ A '),b=await makeUser('e2e_stage10_b','e2e đảng bộ a'.normalize('NFD')),c=await makeUser('e2e_stage10_c','E2E Đảng bộ Á');
+ const now=Date.now();const config={title:'E2E_ROUND_STAGE10',questionCount:2,durationMinutes:30,maxAttempts:3,trialStartAt:new Date(now-7200000).toISOString(),startAt:new Date(now-3600000).toISOString(),endAt:new Date(now+7200000).toISOString(),showCorrectAnswers:false};
+ const round=await rounds.create(config);await assert.rejects(()=>rounds.update(round.id,{status:'OPEN'}),{statusCode:409});
+ for(let i=0;i<2;i++)await questions.create(round.id,{questionCode:`E2E_Q_STAGE10_${i}`,category:'E2E Nhóm',content:'Nội dung snapshot gốc',optionA:'Một',optionB:'Hai',optionC:'Ba',correctAnswer:'A'});
+ await rounds.update(round.id,{status:'OPEN'});
+ const run=async(user,pass,time=now)=>{const item=(await attempts.start(round.id,user.id,{now:()=>time})).attempt;const qs=await db('attempt_questions').where({attempt_id:item.id});await attempts.saveAnswers(item.id,user.id,{answers:qs.map(q=>({attemptQuestionId:q.id,selectedAnswer:pass?q.correct_answer:['A','B','C'].find(x=>x!==q.correct_answer)}))},{now:()=>time+10});await attempts.submit(item.id,user.id,{now:()=>time+20});return item;};
+ const passed=await run(a,true);await run(a,false);await run(b,false);await run(c,true);const trial=await run(a,true,now-5400000);
+ server=require('../app/application').listen(0);const base=`http://127.0.0.1:${server.address().port}/api`;
+ const call=(path,method='GET',body,session)=>fetch(base+path,{method,headers:{'Content-Type':'application/json',...(session?{Cookie:session.cookie,'X-CSRF-Token':session.csrf}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
+ const login=async user=>{const response=await call('/auth/login','POST',{username:user.username,password:'123456'});assert.equal(response.status,200);return {cookie:response.headers.get('set-cookie').split(';')[0],csrf:(await response.json()).csrfToken};};
+ // Cổng công khai: hai đợt đồng thời; không lộ câu hỏi/cấu hình đáp án hoặc dữ liệu người thi.
+ const second=await rounds.create({...config,title:'E2E_ROUND_PUBLIC_2'});
+ for(let i=0;i<2;i++)await questions.create(second.id,{questionCode:`PUBLIC_${i}`,category:'E2E',content:'Câu riêng',optionA:'Một',optionB:'Hai',correctAnswer:'A'});
+ await rounds.update(second.id,{status:'OPEN'});
+ const hidden=await rounds.create({...config,title:'E2E_ROUND_PUBLIC_DRAFT'});
+ const future=await rounds.create({...config,title:'E2E_ROUND_PUBLIC_FUTURE',trialStartAt:null,startAt:new Date(now+3600000).toISOString()});
+ const expired=await rounds.create({...config,title:'E2E_ROUND_PUBLIC_EXPIRED',trialStartAt:null,startAt:new Date(now-7200000).toISOString(),endAt:new Date(now-3600000).toISOString()});
+ await db('exam_rounds').whereIn('id',[future.id,expired.id]).update({status:'OPEN'});
+ const publicResponse=await call('/public/exam-rounds');assert.equal(publicResponse.status,200);assert.equal(publicResponse.headers.get('cache-control'),'no-store');
+ const publicData=await publicResponse.json();assert.equal(publicData.pagination.total,2);assert.deepEqual(new Set(publicData.items.map(x=>x.id)),new Set([round.id,second.id]));
+ assert.ok(!publicData.items.some(x=>x.id===hidden.id));
+ for(const item of publicData.items)assert.deepEqual(Object.keys(item).sort(),['id','title','questionCount','durationMinutes','startAt','endAt','trialStartAt','status'].sort());
+ const pageResponse=await call('/public/exam-rounds?page=2&limit=1');const publicPage=await pageResponse.json();assert.equal(publicPage.items.length,1);assert.equal(publicPage.pagination.total,2);
+ assert.equal((await call('/public/exam-rounds?status=DRAFT')).status,422);
+ const sa=await login(a),sb=await login(b),sadmin=await login(admin);
+ const json=async(path,session)=>{const response=await call(path,'GET',undefined,session);assert.equal(response.status,200,await response.clone().text());return response.json();};
+ const own=await json(`/exam-rounds/${round.id}`,sa);assert.equal(own.participation.usedAttempts,2);assert.equal(own.participation.remainingAttempts,1);assert.equal(own.participation.trialUsedAttempts,1);assert.equal(own.participation.finalResult,'PASSED');
+ const other=await json(`/exam-rounds/${round.id}?userId=${a.id}`,sb);assert.equal(other.participation.usedAttempts,1);assert.equal(other.participation.finalResult,'IN_PROGRESS_ROUND');
+ const closed=await rounds.create({...config,title:'E2E_ROUND_Đã đóng',status:'CLOSED'});
+ const list=await json('/exam-rounds',sa);assert.ok(list.items.findIndex(x=>x.id===round.id)<list.items.findIndex(x=>x.id===closed.id));assert.equal(list.items.find(x=>x.id===round.id).participation.usedAttempts,2);
+ const administrative=await json(`/admin/exam-rounds/${round.id}`,sadmin);assert.equal(administrative.validQuestionCount,2);assert.equal(Object.hasOwn(administrative,'participation'),false);
+ const active=(await attempts.start(round.id,a.id)).attempt;const resumed=await json(`/exam-rounds/${round.id}`,sa);assert.equal(resumed.participation.activeAttempt.id,active.id);assert.equal(resumed.participation.canResume,true);await attempts.submit(active.id,a.id);
+ assert.equal((await json(`/exam-rounds/${round.id}`,sa)).participation.reasonCode,'LIMIT_REACHED');await rounds.update(round.id,{stopAfterPass:true});assert.equal((await json(`/exam-rounds/${round.id}`,sa)).participation.reasonCode,'PASSED');
+ // Nhóm NFC/khoảng trắng/hoa-thường khớp cả tập người và Excel, không gộp nhầm dấu A/Á.
+ const grouped=await reports.committees(round.id,{});assert.equal(grouped.items.length,2);const group=grouped.items.find(x=>x.committeeKey===keyFor('E2E Đảng bộ A'));assert.equal(group.participantCount,2);assert.equal(group.passedCount,1);assert.equal(group.incompleteCount,1);assert.equal(group.attemptCount,4);assert.equal(group.passRate,50);
+ const filtered=await reports.results(round.id,{committeeKey:group.committeeKey});assert.equal(filtered.items.length,2);assert.equal(filtered.statistics.attemptCount,group.attemptCount);assert.equal(filtered.statistics.passedCount,group.passedCount);
+ const trialGroups=await reports.committees(round.id,{isTrial:'true'});assert.equal(trialGroups.items.length,1);assert.equal(trialGroups.items[0].attemptCount,1);
+ const prefix=`/admin/exam-rounds/${round.id}`;assert.equal((await call(prefix+'/committee-statistics')).status,401);assert.equal((await call(prefix+'/committee-statistics','GET',undefined,sa)).status,403);assert.equal((await call(prefix+'/committee-statistics?committeeKey=invalid','GET',undefined,sadmin)).status,422);
+ const exported=await call(prefix+`/export?committeeKey=${group.committeeKey}`,'GET',undefined,sadmin);assert.equal(exported.status,200);const book=new(require('exceljs').Workbook)();await book.xlsx.load(Buffer.from(await exported.arrayBuffer()));assert.equal(book.getWorksheet('Chi tiết').rowCount,3);const sheet=book.getWorksheet('Theo đảng bộ');assert.equal(sheet.rowCount,2);assert.equal(sheet.getCell('B2').value,2);assert.equal(sheet.getCell('G2').value,4);
+ const path=prefix+`/participants/${a.id}/attempts`;
+ for(const endpoint of [path,`/admin/attempts/${passed.id}`]){assert.equal((await call(endpoint)).status,401);assert.equal((await call(endpoint,'GET',undefined,sa)).status,403);}
+ assert.equal((await call('/admin/attempts/invalid','GET',undefined,sadmin)).status,422);assert.equal((await call(`/admin/attempts/00000000-0000-0000-0000-000000000000`,'GET',undefined,sadmin)).status,404);assert.equal((await call(prefix+'/participants/invalid/attempts','GET',undefined,sadmin)).status,422);
+ const paged=await json(path+'?page=1&limit=1',sadmin);assert.equal(paged.items.length,1);
+ const history=await json(path,sadmin);assert.equal(history.pagination.total,4);assert.ok(history.items.some(x=>x.isTrial));assert.ok(history.items.some(x=>x.id===trial.id));
+ const before=await db('attempts').where({id:passed.id}).first();await db('questions').where({exam_round_id:round.id}).update({content:'E2E Đã sửa câu',correct_answer:'B'});
+ const detail=await json(`/admin/attempts/${passed.id}`,sadmin);assert.ok(detail.questions.every(q=>q.content==='Nội dung snapshot gốc'&&q.correctAnswer));assert.equal(detail.config.showCorrectAnswers,false);assert.equal(detail.result,'PASS');assert.deepEqual(await db('attempts').where({id:passed.id}).first(),before);
+ assert.ok(audits.some(x=>x?.event==='admin_attempt_viewed'&&x.actorUserId===admin.id));
+ const userDetail=await json(`/attempts/${passed.id}/result`,sa);assert.ok(userDetail.questions.every(q=>!Object.hasOwn(q,'correctAnswer')));
+ // Xem Admin không tự chốt lượt đã quá hạn.
+ const pending=(await attempts.start(round.id,b.id)).attempt;await db('attempts').where({id:pending.id}).update({expires_at:new Date(now-60000)});const frozen=await db('attempts').where({id:pending.id}).first();await json(`/admin/attempts/${pending.id}`,sadmin);assert.deepEqual(await db('attempts').where({id:pending.id}).first(),frozen);
+ await rounds.update(round.id,{status:'CLOSED'});assert.equal((await json(`/exam-rounds/${round.id}`,sb)).participation.reasonCode,'ENDED');
+ await rounds.update(round.id,{status:'OPEN',trialStartAt:null,startAt:new Date(now+3600000).toISOString(),endAt:new Date(now+7200000).toISOString()});assert.equal((await json(`/exam-rounds/${round.id}`,sa)).participation.reasonCode,'NOT_STARTED');
+});

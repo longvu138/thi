@@ -1,0 +1,16 @@
+# ADMIN xem mọi lượt của một người trong đợt, chính thức và thử, chỉ đọc.
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/participants/<USER_ID>/attempts" --cookie admin.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/participants/<USER_ID>/attempts?page=1&limit=20" --cookie admin.cookies.txt
+# Chi tiết snapshot, đáp án đã chọn và đúng; có audit log, không chốt/chấm/sửa lượt.
+curl --request GET "http://localhost:3108/api/admin/attempts/<ATTEMPT_ID>" --cookie admin.cookies.txt
+# Validation 422, không tồn tại 404
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/participants/invalid/attempts" --cookie admin.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/attempts/invalid" --cookie admin.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/attempts/00000000-0000-0000-0000-000000000000" --cookie admin.cookies.txt
+# Security 401 chưa đăng nhập / hết hạn, 403 USER (kể cả chính chủ lượt)
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/participants/<USER_ID>/attempts"
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/participants/<USER_ID>/attempts" --cookie expired.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/participants/<USER_ID>/attempts" --cookie user.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/attempts/<ATTEMPT_ID>"
+curl --request GET "http://localhost:3108/api/admin/attempts/<ATTEMPT_ID>" --cookie expired.cookies.txt
+curl --request GET "http://localhost:3108/api/admin/attempts/<ATTEMPT_ID>" --cookie user.cookies.txt
