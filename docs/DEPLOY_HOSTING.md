@@ -1,167 +1,223 @@
-# Hướng dẫn deploy lên Shared Hosting (cPanel)
+# Deploy lên Shared Hosting bằng Git — Backend trước
 
-Triển khai source này trên hosting hỗ trợ Node.js/cPanel: kéo code bằng Git về hosting, Backend chạy bằng **Setup Node.js App** (Passenger), Frontend build ở máy cá nhân rồi đưa lên `public_html`. Không dùng Docker.
+Viết theo quy trình NTDLS bạn cung cấp: clone trực tiếp vào `~/tracnghiem`, chạy `~/tracnghiem/backend`, pull tại `~/tracnghiem` rồi restart. Đã đối chiếu source hệ thống thi hiện tại. Dùng cPanel Terminal, Git Version Control và Setup Node.js App (Passenger); không dùng Docker hoặc PM2.
 
-Trong tài liệu, thay các giá trị mẫu:
-
-| Mẫu | Ý nghĩa |
-|---|---|
-| `thi.example.vn` | Tên miền chạy hệ thống |
-| `cpuser` | Tên tài khoản cPanel (thư mục `/home/cpuser`) |
-| `GITHUB_USER/thi` | Repository chứa source |
-
----
-
-## 0. Đọc trước: giới hạn của shared hosting
-
-Mục tiêu 1000 người thi đồng thời chưa được xác minh trên hosting này. Shared hosting thường giới hạn:
-
-- **CPU, RAM, Entry Processes (số request xử lý đồng thời)** theo gói (CloudLinux LVE). Vượt giới hạn sẽ trả lỗi **508** hoặc rất chậm.
-- **Số kết nối MySQL** mỗi user (`max_user_connections`, thường 10–30).
-- Tiến trình Node.js **bị tắt khi không có truy cập** một lúc.
-
-Trước khi chọn gói:
-
-1. Hỏi nhà cung cấp các con số: CPU, RAM, Entry Processes, `max_user_connections` MySQL, có cho chạy Node.js lâu dài không.
-2. Xác nhận hosting có MySQL 8, Node.js 24 (hoặc 22 tương thích dependencies), Terminal/SSH và cho chạy một Backend liên tục. Hosting chỉ chạy PHP/static không đủ cho source này.
-3. Thử tải nhẹ trên chính hosting (phần Kiểm tra trước khi mở thi) **sau khi đã xin phép nhà cung cấp**.
-4. Nếu số người thi cùng lúc lớn mà hosting không chịu được: chia ca thi theo đơn vị, hoặc chuyển sang VPS (khi đó dùng `docs/VAN_HANH.md` bản Docker).
-
----
-
-## Bước 1. Tạo database và chuẩn bị subdomain
-
-Website chính ở `example.vn` giữ nguyên. Dùng `thi.example.vn` cho giao diện và `api-thi.example.vn` cho Backend. Tạo document root riêng cho từng subdomain; không upload đè thư mục website chính.
-
-Trong **MySQL Database Wizard**: tạo database trống → tạo user → gán user vào database → cấp quyền. Ghi lại host, tên database, user (đầy đủ prefix cPanel) và mật khẩu để dùng ở bước 4.
-
-
-- [ ] Tên miền trỏ về hosting; bật **SSL/TLS Status → AutoSSL** để có HTTPS (bắt buộc, cookie đăng nhập cần Secure).
-- [ ] cPanel → **MySQL Databases**: tạo database (ví dụ `cpuser_thi`), user (ví dụ `cpuser_thi`), mật khẩu mạnh; gán user vào database với **ALL PRIVILEGES** (cần quyền `CREATE TEMPORARY TABLES` cho báo cáo theo đảng bộ).
-- [ ] Source đã đẩy lên GitHub (repository private). File `.env`, PDF, `outputs/` không có trong repository.
-- [ ] Dùng SSH deploy key chỉ đọc hoặc cách xác thực Git do hosting hỗ trợ; không nhúng token vào URL clone. Có thể upload source ZIP thay Git, nhưng không upload `.env` local hoặc `node_modules` từ máy Mac.
-- [ ] Tạo thêm tên miền API `api-thi.example.vn`, trỏ cùng hosting và bật HTTPS. Hướng dẫn dùng frontend/API ở hai subdomain cùng miền gốc; không cần cấu hình reverse proxy thủ công.
-
----
-
-## Bước 2. Pull source Backend lên hosting
-
-cPanel → **Terminal**:
-
-```bash
-mkdir -p ~/repositories
-git clone git@github.com:GITHUB_USER/thi.git ~/repositories/thi
-mkdir -p ~/thi-data          # nơi lưu bản sao lưu, ngoài public_html
-chmod 700 ~/thi-data
-```
-
-## Bước 3. Tạo ứng dụng Backend Node.js
-
-cPanel → **Setup Node.js App** → **Create Application**:
+## Địa chỉ và thư mục dùng trong hướng dẫn
 
 | Mục | Giá trị |
 |---|---|
-| Node.js version | **24.x** (hoặc 22.x đã kiểm tra tương thích) |
-| Application mode | Production |
-| Application root | `repositories/thi/backend` |
-| Application URL | `api-thi.example.vn` tại đường dẫn gốc `/` |
+| Website | `https://tracnghiem.ntdls.io.vn` |
+| API | `https://tracnghiem.ntdls.io.vn/api` — cùng tên miền |
+| Tài khoản hosting | `mvcmkxiu` |
+| Git repository | `https://github.com/longvu138/thi.git` |
+| Source sau clone | `/home/mvcmkxiu/tracnghiem` |
+| Application root Backend | `tracnghiem/backend` |
+| Startup file | `src/server.js` |
+| Document root Frontend | Xem trong cPanel → Domains → `tracnghiem.ntdls.io.vn` |
+
+Giữ website chính `ntdls.io.vn` và ứng dụng NTDLS hiện có. Chỉ upload Frontend vào document root riêng của `tracnghiem.ntdls.io.vn`, không mặc định dùng `public_html` của website chính.
+
+Thứ tự: **tạo DB → clone source → tạo Node.js App → env → cài thư viện/migrate/Admin → thử Postman → build/upload Frontend → thử một lượt**. Chỉ chuyển sang Frontend khi Backend đã đạt bước 1.7.
+
+## PHẦN 1. BACKEND
+
+### Bước 1.1. Tạo MySQL và bật HTTPS
+
+1. cPanel → Domains: trỏ `tracnghiem.ntdls.io.vn` vào thư mục riêng, ghi lại document root.
+2. SSL/TLS Status → bật SSL/AutoSSL cho subdomain này.
+3. MySQL Database Wizard: tạo **database trống cho hệ thống thi**, ví dụ `mvcmkxiu_thi`.
+4. Tạo MySQL user riêng, gán vào database và cấp quyền. Cần quyền tạo bảng/index/foreign key để migrate, và `CREATE TEMPORARY TABLES` để báo cáo hoạt động. Wizard có thể dùng ALL PRIVILEGES trên đúng database này.
+5. Ghi lại DB_HOST do hosting cung cấp, DB_USER, DB_PASSWORD, DB_NAME đầy đủ prefix. Không dùng database của NTDLS.
+
+Hosting cần MySQL 8 và hỗ trợ Node.js. Hướng dẫn dùng Node **22.x** như môi trường bạn đang có; có thể dùng 24.x nếu hosting hỗ trợ. Không dùng bản 18/20 của tài liệu NTDLS cũ cho source này khi chưa kiểm tra dependencies.
+
+### Bước 1.2. Repository public — không cần token/key
+
+Repository `https://github.com/longvu138/thi.git` là public. Clone và pull bằng HTTPS trực tiếp, không cần GitHub token, SSH key hoặc đăng nhập GitHub trên hosting.
+
+Dùng URL không chứa thông tin xác thực:
+
+```text
+https://github.com/longvu138/thi.git
+```
+
+### Bước 1.3. Clone source vào đúng vị trí
+
+Cài mới khi `~/tracnghiem` chưa tồn tại: mở cPanel → Terminal, chạy từ thư mục home. Nếu đã có cấu trúc như log bạn gửi, **bỏ qua lệnh clone** và làm nhánh “đã clone lồng” bên dưới:
+
+```bash
+cd ~
+git clone https://github.com/longvu138/thi.git ~/tracnghiem
+cd ~/tracnghiem/backend
+pwd
+ls
+```
+
+Kết quả cần thấy:
+
+```text
+/home/mvcmkxiu/tracnghiem/backend
+package.json  pnpm-lock.yaml  knexfile.js  src  scripts  ...
+```
+
+Clone cả repository, không clone URL dạng `.../tree/master/backend`. Đường dẫn đó là trang xem thư mục trên GitHub, không phải Git repository.
+
+**Nếu đã clone lồng đúng như log bạn gửi** (`~/tracnghiem/backend/thi`):
+
+Không clone thêm. Nếu thư mục `~/tracnghiem` chỉ chứa thư mục placeholder của ứng dụng thi và repo lồng như log, dừng riêng app thi trên panel rồi sắp lại như dưới. Các thư mục backup/tạm phải chưa tồn tại; nếu đã tồn tại thì dừng để kiểm tra, không ghi đè.
+
+```bash
+# Thoát Node environment nếu đang kích hoạt: deactivate
+cd ~
+test ! -e ~/thi-source-tmp && test ! -e ~/tracnghiem-panel-backup && \
+  mv ~/tracnghiem/backend/thi ~/thi-source-tmp && \
+  mv ~/tracnghiem ~/tracnghiem-panel-backup && \
+  mv ~/thi-source-tmp ~/tracnghiem
+
+cd ~/tracnghiem/backend
+pwd
+ls
+mkdir -p tmp
+```
+
+Source thực tế giờ nằm tại `~/tracnghiem/backend`; thư mục placeholder cũ còn nguyên trong `~/tracnghiem-panel-backup`, không bị xóa. Kiểm tra lại Save cấu hình Node.js App ở bước sau để Passenger trỏ đúng source mới. Nếu trước đó đã có `.env`/cấu hình hosting trong placeholder, giữ bản backup và đối chiếu trước khi tạo mới; không chép đè cấu hình của NTDLS.
+
+Nếu `~/tracnghiem` đã là repo đúng và có `backend/package.json`, bỏ qua cả bước clone/sắp lại; dùng `git pull --ff-only` như phần cập nhật.
+
+### Bước 1.4. Tạo hoặc sửa ứng dụng Node.js trong cPanel
+
+cPanel → Setup Node.js App → Create Application (hoặc sửa ứng dụng thi đã tạo):
+
+| Trường | Điền |
+|---|---|
+| Node.js version | `22.x` |
+| Application mode | `Production` |
+| Application root | `tracnghiem/backend` |
+| Application URL: domain | `tracnghiem.ntdls.io.vn` |
+| Application URL: path | `/api` |
 | Application startup file | `src/server.js` |
 
-Bấm **Create**. Backend tự nhận cổng/socket do Passenger cấp, không đặt cứng `PORT`. API trong source đã có tiền tố `/api`, nên không mount ứng dụng thêm vào `/api`. Nếu panel chỉ nhận tên startup file, tạo `backend/app.js` chứa `require('./src/server');` rồi chọn `app.js`. Giữ nguyên `.htaccess` Passenger do panel sinh tại document root của tên miền API.
+Bấm Create/Save. Nếu panel không cho đổi Application root của app cũ, nhờ hosting gắn lại ứng dụng thi vào đường dẫn mới; không sửa ứng dụng NTDLS.
 
-## Bước 4. Cấu hình env Backend
+Dùng **lệnh kích hoạt Node do panel hiển thị**. Với Application root `tracnghiem/backend`, lệnh bạn đã gửi trỏ vào `nodevenv/tracnghiem/backend/22` là đúng:
 
-File Manager → `repositories/thi/backend` → copy `.env.prod.example` thành `.env` (quyền 600), điền thông tin thật. Mẫu tối giản đã đủ để bắt đầu; khối dưới liệt kê thêm các giá trị vận hành nếu cần cấu hình rõ. Tạo secret bằng lệnh `openssl rand -hex 32` trong Terminal, **mỗi secret một lần chạy, hai giá trị phải khác nhau**:
+Lệnh kích hoạt theo đường dẫn của bạn:
+
+```bash
+source /home/mvcmkxiu/nodevenv/tracnghiem/backend/22/bin/activate
+cd /home/mvcmkxiu/tracnghiem/backend
+```
+
+Dùng đường dẫn thực tế trên panel nếu khác ví dụ. Chạy `node -v` và `pwd` để xác nhận.
+
+Source nhận PORT số hoặc Unix socket do Passenger cấp, **không đặt cứng `PORT=3008` của NTDLS**. Nếu panel chỉ chấp nhận startup file ngay thư mục gốc, tạo `backend/app.js` trên hosting chứa:
+
+```js
+require('./src/server');
+```
+
+Rồi chọn startup file `app.js`.
+
+### Bước 1.5. Tạo `.env` Backend
+
+Trong Terminal đang ở `~/tracnghiem/backend`:
+
+```bash
+cp .env.prod.example .env
+chmod 600 .env
+openssl rand -hex 32
+openssl rand -hex 32
+```
+
+Chỉ copy khi **chưa có `.env`**. Hai lần chạy openssl tạo hai secret riêng. Mở File Manager → Settings → Show Hidden Files để sửa `.env`:
 
 ```env
 NODE_ENV=production
 
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=cpuser_thi
-DB_PASSWORD=<mật khẩu MySQL>
-DB_NAME=cpuser_thi
-# Không vượt max_user_connections của hosting; bắt đầu từ 3, tăng dần sau khi thử tải.
+DB_USER=mvcmkxiu_thi
+DB_PASSWORD=<MAT_KHAU_MYSQL_DA_TAO>
+DB_NAME=mvcmkxiu_thi
 DB_POOL_MIN=0
 DB_POOL_MAX=3
 
-JWT_SECRET=<openssl rand -hex 32>
-CSRF_SECRET=<openssl rand -hex 32, khác JWT_SECRET>
+JWT_SECRET=<KET_QUA_OPENSSL_THU_NHAT>
+CSRF_SECRET=<KET_QUA_OPENSSL_THU_HAI>
 AUTH_COOKIE_SECURE=true
 AUTH_COOKIE_SAME_SITE=lax
 
-CORS_ALLOWED_ORIGINS=https://thi.example.vn
-CORS_ALLOW_SAME_ORIGIN=false
-# Ví dụ chỉ đúng nếu nhà cung cấp xác nhận đúng một proxy tin cậy.
-# Hỏi nhà cung cấp và thay theo chuỗi proxy thực tế; không mặc định tin mọi proxy.
-TRUST_PROXY=1
-
-# Giới hạn request: người đã vào thi tính theo từng người; theo IP để rộng vì nhiều người dùng chung wifi.
-API_RATE_LIMIT_WINDOW_MS=900000
-API_RATE_LIMIT_MAX=30000
-CANDIDATE_RATE_LIMIT_WINDOW_MS=900000
-CANDIDATE_RATE_LIMIT_MAX=600
-PARTICIPANT_RATE_LIMIT_WINDOW_MS=900000
-PARTICIPANT_RATE_LIMIT_MAX=3000
-
-ATTEMPT_EXPIRY_JOB_ENABLED=true
-ATTEMPT_EXPIRY_INTERVAL_MS=30000
+CORS_ALLOWED_ORIGINS=https://tracnghiem.ntdls.io.vn
+CORS_ALLOW_SAME_ORIGIN=true
 LOAD_TEST_ENABLED=false
-
-LOG_LEVEL=info
-LOG_RETENTION=30d
 ```
 
-Các biến còn lại giữ mặc định trong `backend/.env.example`. Không gửi file `.env` qua Zalo/email, không commit.
+Thay các giá trị mẫu. Hai secret phải khác nhau và tối thiểu 32 ký tự; Backend từ chối secret mẫu/không hợp lệ ở production. Nếu mật khẩu có khoảng trắng hoặc dấu `#`, đặt giá trị trong dấu nháy kép đúng cú pháp dotenv.
 
-## Bước 5. Cài thư viện, migrate và tạo Admin
+**IP/proxy:** hỏi hosting chuỗi proxy tin cậy. Nếu họ xác nhận đúng một proxy phía trước, thêm `TRUST_PROXY=1`. Nếu khác, dùng cấu hình số hop/địa chỉ do họ cung cấp; không tự dùng `true` để tin mọi nguồn.
 
-Trên trang Setup Node.js App, copy dòng lệnh **"Enter to the virtual environment"** (dạng `source /home/cpuser/nodevenv/repositories/thi/backend/22/bin/activate && cd /home/cpuser/repositories/thi/backend`) rồi chạy trong Terminal:
+Pool 3 dùng để bắt đầu trên shared hosting. Nếu cần tùy chỉnh timeout, source này dùng tên có hậu tố `_MS`: `DB_CONNECT_TIMEOUT_MS`, `DB_POOL_ACQUIRE_TIMEOUT_MS`, `DB_POOL_CREATE_TIMEOUT_MS`, `DB_POOL_IDLE_TIMEOUT_MS`. Không copy các tên timeout khác của NTDLS vì source sẽ không đọc chúng.
+
+Không copy `.env` local lên hosting, không commit secret. Nếu cùng một biến đã khai báo ở Environment Variables trong cPanel thì giữ đồng nhất với `.env`: biến từ môi trường tiến trình được ưu tiên.
+
+### Bước 1.6. Cài thư viện, migrate và tạo Admin
+
+Sau khi kích hoạt Node environment mới ở bước 1.4:
 
 ```bash
-source /home/cpuser/nodevenv/repositories/thi/backend/22/bin/activate && cd /home/cpuser/repositories/thi/backend
+cd ~/tracnghiem/backend
 npx --yes pnpm@10.33.3 install --prod --frozen-lockfile
-NODE_ENV=production npm run migrate        # tạo bảng trên database trống
-NODE_ENV=production npm run create-admin   # nhập tên đăng nhập, họ tên, mật khẩu Admin
 ```
 
-- Nếu CloudLinux yêu cầu dùng nút **Run NPM Install**, làm theo hướng dẫn nhà cung cấp (`npm install --omit=dev` không dùng pnpm lockfile). Không chép đè symlink `node_modules` do panel quản lý. Nếu Argon2 không cài được, gửi log cho nhà cung cấp kiểm tra Node/kiến trúc/thư viện hệ thống.
-- Mỗi người quản trị một tài khoản riêng.
+Nếu hosting bắt buộc dùng nút Run NPM Install, dùng theo panel hoặc `npm install --omit=dev`; cách npm này không sử dụng pnpm lockfile. Không upload `node_modules` từ máy Mac, không chép đè symlink `node_modules` do CloudLinux quản lý.
 
-## Bước 6. Chạy Backend và gọi thử bằng Postman
-
-Setup Node.js App → **Start App** (hoặc Restart).
-
-Trong Postman, tạo hai request **GET**, không cần body hoặc đăng nhập:
-
-| Request | Kết quả cần đạt |
-|---|---|
-| `https://api-thi.example.vn/api/health` | HTTP 200, Backend chạy |
-| `https://api-thi.example.vn/api/health/db` | HTTP 200, kết nối MySQL được |
-
-Có thể kiểm tra tương đương bằng Terminal:
+Kiểm tra `.env` đang trỏ đúng database thi mới ở bước 1.1, rồi chạy:
 
 ```bash
-curl -s https://api-thi.example.vn/api/health
-curl -s https://api-thi.example.vn/api/health/db
+NODE_ENV=production npm run migrate
+NODE_ENV=production npm run create-admin
 ```
 
-`/api/health/db` trả 503 → kiểm tra lại `DB_*`, quyền user MySQL. Nếu 404, kiểm tra Application URL và startup file; nếu ứng dụng không chạy, xem log Passenger/Backend.
+- Migrate tạo bảng trên database mới, không import dữ liệu test local.
+- Lệnh create-admin hỏi thông tin Admin và mật khẩu; không có tài khoản/mật khẩu mặc định.
+- Nếu migrate thất bại, dừng và xử lý lỗi trước, không chạy rollback/reset/drop để thử trên DB có dữ liệu.
 
-**Dừng ở bước này nếu chưa đạt cả hai HTTP 200. Chỉ triển khai Frontend sau khi Backend chạy được.** Postman không kiểm chứng CORS/cookie trình duyệt; phần đó kiểm tra ở bước 9.
+Sau đó cPanel → Setup Node.js App → Start App/Restart.
 
----
+### Bước 1.7. Thử Backend bằng Postman — chưa cần Frontend
 
-## Bước 7. Build Frontend trên máy cá nhân
+Tạo hai request GET, không body, không đăng nhập:
 
-`frontend/.env` hiện đang trỏ `http://localhost:3108/api` — **không dùng file này để build bản chính thức**. Tạo `frontend/.env.production` (đã bị `.gitignore` bỏ qua):
+| URL | Cần đạt |
+|---|---|
+| `https://tracnghiem.ntdls.io.vn/api/health` | HTTP 200 |
+| `https://tracnghiem.ntdls.io.vn/api/health/db` | HTTP 200 |
+
+Hoặc Terminal:
+
+```bash
+curl -i https://tracnghiem.ntdls.io.vn/api/health
+curl -i https://tracnghiem.ntdls.io.vn/api/health/db
+```
+
+- 404: kiểm tra Application URL `/api`, startup file và Passenger. Express trong source đã có router `/api`; địa chỉ bên ngoài phải là `/api/health`, không phải `/api/api/health`. Nếu hosting thay đổi tiền tố đường dẫn khi chuyển vào Node, nhờ nhà cung cấp kiểm tra cấu hình sub-URI.
+- 503 ở health/db: kiểm tra DB_HOST, tên/user/password đầy đủ prefix, quyền user và giới hạn kết nối MySQL.
+- 500 hoặc không start: xem log Passenger và `backend/logs`; lưu requestId để đối chiếu. Không gửi secret trong log hỗ trợ.
+
+**Chỉ tiếp tục phần 2 khi cả hai trả HTTP 200.** Postman chưa xác minh được cookie/CORS trên trình duyệt. Passenger có yêu cầu cấu hình theo framework khi chạy dưới đường dẫn con: [tài liệu Node.js chính thức](https://www.phusionpassenger.com/docs/advanced_guides/deployment_and_scaling/apache/deploy/node/).
+
+## PHẦN 2. FRONTEND — chỉ làm sau khi Backend chạy
+
+### Bước 2.1. Build trên máy cá nhân
+
+Tại source trên máy của bạn, tạo hoặc sửa `frontend/.env.production`:
 
 ```env
-# API trên subdomain riêng, vẫn giữ hậu tố /api.
-VITE_API_BASE_URL=https://api-thi.example.vn/api
-# Địa chỉ website trong mã QR.
-VITE_PUBLIC_APP_URL=https://thi.example.vn
+VITE_API_BASE_URL=/api
+VITE_PUBLIC_APP_URL=https://tracnghiem.ntdls.io.vn
 ```
+
+`/api` dùng đúng cùng tên miền website, không cần subdomain API riêng. `.env.production` này khác file production của Backend, chỉ có URL công khai.
 
 ```bash
 cd frontend
@@ -169,23 +225,36 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-Kiểm tra nhanh đã build đúng: `grep -r "localhost:3108" dist` **không được ra kết quả**.
+Chạy trong thư mục `frontend`, không chạy `pnpm build` ở gốc repo. Nén **nội dung bên trong** `frontend/dist` thành `dist.zip`.
 
-Nén toàn bộ nội dung **bên trong** `frontend/dist` thành `dist.zip`.
+### Bước 2.2. Upload vào đúng document root của subdomain
 
-## Bước 8. Upload Frontend vào subdomain
+1. cPanel → Domains → xem document root của `tracnghiem.ntdls.io.vn`.
+2. File Manager → đúng thư mục đó → upload và giải nén dist.zip. `index.html` và `assets/` nằm ngay tại document root.
+3. Không upload đè `public_html` đang phục vụ NTDLS; không xóa thư mục `api` hoặc `.htaccess` do cPanel sinh.
+4. Backend source, `.env`, `.git` và `node_modules` vẫn ở ngoài document root frontend.
 
-1. File Manager → document root của `thi.example.vn` (thường `public_html`): upload và giải nén **nội dung** `dist`, để `index.html` nằm ngay tại document root. Không xóa file của website khác. Backend source và `.env` nằm ngoài thư mục này.
-2. Tạo `.htaccess` cho **frontend**, không sửa `.htaccess` Passenger của tên miền API:
+### Bước 2.3. `.htaccess` cho Frontend và API cùng domain
+
+**Giữ nguyên khối Passenger do Setup Node.js App sinh**, đặc biệt Application root, Node binary và BaseURI `/api`. Không copy khối NTDLS đang trỏ `/home/mvcmkxiu/ntdls/backend` vào ứng dụng thi.
+
+Tại document root frontend, bổ sung phần sau bên dưới cấu hình hosting hiện có:
 
 ```apache
+# GIỮ NGUYÊN các khối Passenger/SSL/hosting đã có ở phía trên.
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /
+
+    # API để Passenger xử lý, không trả index.html của React.
+    RewriteRule ^api(?:/|$) - [L]
+
     RewriteRule ^index\.html$ - [L]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule . /index.html [L]
 </IfModule>
+
 <IfModule mod_headers.c>
     <FilesMatch "^index\.html$">
         Header set Cache-Control "no-cache"
@@ -193,98 +262,91 @@ Nén toàn bộ nội dung **bên trong** `frontend/dist` thành `dist.zip`.
 </IfModule>
 ```
 
-3. Mở `https://thi.example.vn`, vào thi thử; mở `https://thi.example.vn/admin/login`, đăng nhập Admin. Tải lại (F5) ở một trang con như `/exam-rounds` phải không lỗi 404.
+Phần rewrite **không tự khởi động Backend**. Node.js App và cấu hình Passenger ở `/api` vẫn phải được tạo trước. Nếu đang có SPA fallback cũ, sửa đúng khối đó để dòng bỏ qua `/api` đứng trước fallback, không chỉ nối thêm một khối sau rule đã chặn API. Không tự tạo lại Passenger config thiếu đường dẫn Node binary; dùng cấu hình panel sinh hoặc nhờ hosting kiểm tra.
 
----
+### Bước 2.4. Thử Frontend gọi Backend
 
-## Bước 9. Kiểm tra Frontend kết nối Backend
+1. Mở `https://tracnghiem.ntdls.io.vn/admin/login`, đăng nhập Admin vừa tạo.
+2. Mở Đợt kiểm tra, tạo đợt Nháp, thêm/import câu, lưu cơ cấu và cấu hình thời gian.
+3. Dùng cửa sổ riêng ở `https://tracnghiem.ntdls.io.vn/`: nhập thông tin → Vào thi → chọn câu → nộp → kết quả → Lưu/In phiếu → ảnh/PDF/tra cứu mã. Dùng đợt và thông tin thử riêng trước ngày thi.
+4. F5 tại URL con như `/admin/exam-rounds/<id>` hoặc kết quả không được 404.
+5. Network phải gọi `https://tracnghiem.ntdls.io.vn/api/...`; không gọi localhost. Nếu Postman đạt nhưng browser lỗi, kiểm tra cookie Secure, HTTPS, CORS, `.htaccess` và cache bản Frontend cũ.
 
-1. Mở `https://thi.example.vn/admin/login`, đăng nhập bằng Admin tạo ở bước 5.
-2. Kiểm tra trang danh sách đợt tải được; F5 tại trang con không bị 404.
-3. Trên một đợt chạy thử riêng: thêm/import câu → lưu cơ cấu → mở đợt theo thời gian chạy thử.
-4. Mở cổng người thi: nhập thông tin → xác nhận bắt đầu → chọn đáp án → nộp → xem kết quả → in phiếu và tra cứu lại bằng mã.
-5. Trong Network của trình duyệt: request phải gọi `https://api-thi.example.vn/api/...`, không gọi localhost. Nếu Postman thành công nhưng trình duyệt lỗi, kiểm tra CORS đúng `https://thi.example.vn`, SSL và cookie Secure.
+Không mở thi chính thức trước khi hoàn thành một vòng trên hosting. Đặc biệt tự kiểm điện thoại/Zalo, ảnh/PDF và bản in A4; kiểm tra code local không chứng minh các thao tác này đã chạy trên hosting.
 
-**Chỉ mở thi chính thức sau khi hoàn thành luồng chạy thử. Không thử tải hoặc reset trên database thật.**
+## PHẦN 3. PULL CODE VÀ RESTART GIỐNG NTDLS
 
-## Bước 10. Thiết lập vận hành (cPanel → Cron Jobs)
+Không cập nhật trong giờ thi. Sao lưu database bằng chức năng hosting/phpMyAdmin hoặc công cụ MySQL trước khi cập nhật; không ghi đè `.env` của hosting bằng bản local.
 
-### 10.1 Kiểm tra tiến trình Backend
+### Cách A. Terminal
 
-Nếu Passenger cho ứng dụng ngủ, job tự chốt cũng dừng. Cần nhà cung cấp cấu hình một tiến trình luôn chạy; nhiều tiến trình sẽ có bộ rate-limit trong RAM riêng. Cron gọi health bên dưới chỉ giúp đánh thức/kiểm tra, không đảm bảo tiến trình luôn sống:
-
-```
-* * * * * curl -fsS --max-time 20 https://api-thi.example.vn/api/health >/dev/null 2>&1
-```
-
-### 10.2 Sao lưu database hằng ngày — bắt buộc
-
-Tạo `~/.my.cnf` (quyền 600) để không ghi mật khẩu trong lệnh cron:
-
-```ini
-[client]
-user=cpuser_thi
-password=<mật khẩu MySQL>
+```bash
+cd ~/tracnghiem
+git status --short
+git pull --ff-only
 ```
 
-Cron chạy 01:30 mỗi ngày (chọn nhận email lỗi cron). Chỉ dọn bản cũ sau khi xác minh backup thành công; giữ ít nhất 14 bản:
+Nếu có thay đổi source trên hosting, xử lý chênh lệch trước khi pull; không dùng `git reset --hard` hoặc xóa `.env` để vượt lỗi. `.env` không thuộc Git.
 
+Kích hoạt Node environment do panel hiển thị rồi:
+
+```bash
+cd ~/tracnghiem/backend
+npx --yes pnpm@10.33.3 install --prod --frozen-lockfile
+# Chỉ khi phiên bản mới có migration cần áp dụng:
+NODE_ENV=production npm run migrate
+mkdir -p tmp
+touch tmp/restart.txt
 ```
-30 1 * * * /bin/bash -o pipefail -c 'mkdir -p ~/thi-data/backup && mysqldump --single-transaction --quick --no-tablespaces cpuser_thi | gzip > ~/thi-data/backup/thi-$(date +\%Y\%m\%d-\%H\%M).sql.gz'
-```
 
-- Mỗi tuần tải ít nhất một bản sao lưu về máy khác (File Manager → Download).
-- Trước và sau mỗi ngày thi, chạy tay lệnh trên một lần.
-- Script `deploy/backup.sh`, `deploy/restore.sh` dành cho Docker, **không dùng trên hosting**.
+Có thể dùng Restart App trên panel thay `touch`. Backend chạy trực tiếp từ thư mục repository nên code pull về chính là source ứng dụng dùng. Nếu Frontend thay đổi, build lại trên máy và upload dist mới; Git pull/restart Backend không tự build hay cập nhật Frontend.
 
-### 10.3 Diễn tập khôi phục (làm một lần trước ngày thi)
+### Cách B. Git Version Control của cPanel
 
-1. MySQL Databases: tạo database tạm `cpuser_thi_restore`, gán cùng user.
-2. Terminal: `gunzip -c ~/thi-data/backup/<file>.sql.gz | mysql cpuser_thi_restore`
-3. phpMyAdmin: so số dòng các bảng `users`, `exam_rounds`, `questions`, `attempts` với database chính, rồi xóa database tạm.
+1. cPanel → Git Version Control: chọn repo `/home/mvcmkxiu/tracnghiem` → Manage → Pull or Deploy → **Update from Remote** (một số giao diện ghi Update from Source).
+2. Nếu clone bằng Terminal mà repo chưa hiện trong panel, dùng Create/Add existing repository để đăng ký repo sẵn có, hoặc tiếp tục Cách A; không clone lồng thêm lần nữa.
+3. Cài lại dependencies khi cần, migrate khi có migration mới, rồi Restart App hoặc `touch backend/tmp/restart.txt` như trên.
 
----
+Cách này không cần tự động Deploy HEAD Commit hoặc `.cpanel.yml` vì Application root trỏ trực tiếp vào source repo. Update from Remote là kéo code; Deploy HEAD Commit là tác vụ triển khai riêng của cPanel: [hướng dẫn Git Version Control](https://docs.cpanel.net/cpanel/files/git-version-control/), [hướng dẫn deployment](https://docs.cpanel.net/knowledge-base/web-services/guide-to-git-deployment/).
 
-## Cập nhật phiên bản mới
+Sau cập nhật, kiểm lại hai health API và một vòng cơ bản trên dữ liệu thử phù hợp. Không import lại DB local hay reset schema có dữ liệu.
 
-Không cập nhật trong giờ thi.
+## PHẦN 4. XỬ LÝ LỖI THƯỜNG GẶP
 
-1. Sao lưu database (chạy tay lệnh 10.2).
-2. cPanel → **Git Version Control** → Manage → **Pull or Deploy** → **Update from Source** (hoặc `git pull` trong `~/repositories/thi`).
-3. Nếu `backend/package.json` thay đổi: vào virtual environment, chạy `npm install --omit=dev`.
-4. Nếu có migration mới: `NODE_ENV=production npm run migrate`.
-5. Khởi động lại Backend: `mkdir -p ~/repositories/thi/backend/tmp && touch ~/repositories/thi/backend/tmp/restart.txt` (hoặc Restart trong Setup Node.js App).
-6. Nếu Frontend thay đổi: build lại ở máy (bước 7), tải lên `public_html` như bước 8.
-7. Kiểm tra `/api/health`, `/api/health/db`, vào thi thử một lượt bằng đợt chạy thử.
+### Clone xong chỉ thấy public/src/tmp, thiếu package.json
 
----
+Bạn đang đứng ở root ứng dụng placeholder hoặc clone bị lồng. Source đúng theo tài liệu là `~/tracnghiem/backend`. Kiểm tra `pwd`, `ls`, Application root và dòng kích hoạt Node. Không clone URL `/tree/master/backend`; không clone lại khi repo đã có.
 
-## Xử lý sự cố
+### `'abrt-cli status' timed out`
 
-| Hiện tượng | Xử lý |
+Trong log bạn gửi, lệnh này không ngăn Git clone thành công. Kiểm tra tiếp `pwd`/source đúng vị trí. Nếu Terminal thường xuyên treo hoặc Node không chạy, gửi lỗi cho hosting kiểm tra môi trường tài khoản; không sửa dịch vụ hệ điều hành từ source ứng dụng.
+
+### `Can't acquire lock for app`
+
+Khác tài liệu NTDLS cũ: **không chạy `pkill -f node`, `killall -9 node` hoặc xóa hàng loạt lock**. Tài khoản này còn ứng dụng NTDLS; các lệnh đó có thể dừng cả website đang chạy.
+
+1. Ghi lại tên ứng dụng thi và thời điểm lỗi, kiểm tra log Passenger/Node.
+2. Thử thao tác riêng ứng dụng thi trong Setup Node.js App, không bấm Start/Stop liên tục.
+3. Nếu vẫn kẹt lock, nhờ hosting giải phóng lock/tiến trình của đúng Application root `tracnghiem/backend`. Không có một lệnh xóa lock chung an toàn cho mọi phiên bản CloudLinux.
+
+### Các lỗi khác
+
+| Hiện tượng | Kiểm tra |
 |---|---|
-| `Can't acquire lock for app` khi Start/Stop | Dùng Restart trong panel hoặc nhờ nhà cung cấp xử lý đúng ứng dụng; không kill toàn bộ Node hay xóa lock của tài khoản. |
-| `/api/health/db` trả 503 | Sai `DB_*`, user chưa gán quyền, hoặc đã hết kết nối MySQL → giảm `DB_POOL_MAX`. |
-| Lỗi **508** / trang rất chậm khi đông người | Hết tài nguyên gói hosting (CPU/Entry Processes). Báo nhà cung cấp, nâng gói; trước mắt chia ca. |
-| Nhiều lỗi **429** | Giới hạn request quá chặt hoặc `TRUST_PROXY` sai (mọi người bị ghi chung một IP). Kiểm tra IP trong `backend/logs/access-*.log`. |
-| Backend không khởi động, log báo secret | `JWT_SECRET`/`CSRF_SECRET` thiếu, ngắn hơn 32 ký tự hoặc trùng nhau; `AUTH_COOKIE_SECURE` phải là `true`. |
-| Trang trắng hoặc gọi API `localhost` | Frontend build bằng `frontend/.env` thay vì `.env.production`; build lại theo bước 7. |
-| F5 ở trang con báo 404 | Thiếu khối rewrite trong `.htaccess` (bước 8). |
+| Argon2 cài lỗi | Node/kiến trúc/thư viện hệ thống; gửi log install cho hosting. Không dùng node_modules từ Mac. |
+| Backend báo secret không hợp lệ | Hai secret chưa thay, ngắn hoặc trùng; dùng hai kết quả openssl riêng. |
+| API trả HTML giao diện thay JSON | SPA rewrite bắt `/api`; đặt rule bỏ qua API trước fallback và kiểm tra Passenger. |
+| API 404 | Mount `/api`/BaseURI/startup; không thêm thành `/api/api`. |
+| API DB 503 | DB_HOST, prefix tài khoản, quyền và pool MySQL. |
+| Đăng nhập xong mất phiên | HTTPS/cookie/CORS; giữ frontend và API cùng domain đã cấu hình. |
+| Trang trắng/refresh 404 | Dist build đúng env và `.htaccess` tại document root subdomain. |
+| 429 | Rate limit hoặc TRUST_PROXY chưa đúng; đối chiếu IP log với cấu hình nhà cung cấp. |
+| 508/chậm khi đông người | Giới hạn CPU/RAM/entry processes/kết nối của gói hosting; chưa có bằng chứng chịu 1000 người đồng thời. |
 
-Log Backend: `~/repositories/thi/backend/logs/` (tự xoay vòng theo `LOG_RETENTION`).
+## Trước ngày thi
 
----
+- Nhà cung cấp cần xác nhận Backend chạy liên tục, một instance. Passenger ngủ thì job tự chốt không chạy đúng nhịp; nhiều instance có rate limit trong RAM riêng. Không coi cron ping health là bảo đảm tiến trình luôn chạy.
+- Thiết lập backup MySQL hằng ngày và thử khôi phục theo công cụ hosting trên DB phù hợp; không dùng script backup/restore Docker cho hosting.
+- Không bật LOAD_TEST_ENABLED hoặc chạy load-test trên DB thật. Muốn đo sức tải, dùng staging riêng và có sự đồng ý của nhà cung cấp; số liệu local không phải số liệu hosting.
 
-## Sau khi deploy xong
-
-Tiếp tục theo `docs/VAN_HANH.md` từ phần chuẩn bị đợt thi: import câu hỏi, cơ cấu đề, kiểm tra cấu hình hai người, chạy thử với nhóm nhỏ, xóa dữ liệu chạy thử, theo dõi hằng ngày và xử lý sự cố. Các phần về Docker, Caddy, `backup.sh` trong `VAN_HANH.md` thay bằng tài liệu này.
-
----
-
-## Kiểm tra trước khi mở thi
-
-- Dùng đợt chạy thử riêng để kiểm tra: vào cổng → nhập thông tin → bắt đầu → chọn đáp án → nộp → kết quả → in/tra cứu phiếu. Kiểm tra F5 ở trang con và đăng nhập Admin.
-- Không chạy `pnpm load-test` trên database thật. Script hiện chỉ chấp nhận database QA `exam_load_test_*` và handshake tương ứng; không bật `LOAD_TEST_ENABLED` trên production để thử cho tiện.
-- Nếu cần thử tải, dùng môi trường staging riêng có sự đồng ý của nhà cung cấp. Không coi kết quả local là cam kết sức chứa hosting.
-
-Tham khảo thao tác panel: [cPanel — tạo ứng dụng Node.js qua CloudLinux](https://support.cpanel.net/hc/en-us/articles/1500000004602-How-to-create-a-NodeJS-application-via-CloudLinux). Tên mục có thể khác tùy nhà cung cấp.
+Hướng dẫn này được rà theo source và tài liệu tham chiếu; **chưa thao tác trực tiếp trên tài khoản hosting của bạn**. Từng bước có mốc kiểm tra để xác nhận trước khi đi tiếp.
