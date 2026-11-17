@@ -8,3 +8,7 @@ test('Mã phiếu lưu tối đa mười mã, bỏ trùng và không nhận cach
 test('Ngày và giờ phiếu theo Việt Nam, không phụ thuộc múi giờ trình duyệt',()=>{
  const data=receiptDate('2026-11-12T18:38:00Z');assert.equal(data.date,'13/11/2026');assert.equal(data.time,'01:38');assert.equal(receiptDate('invalid').date,'');
 });
+
+test('Lưu được mã 6 ký tự cùng mã cũ',()=>{
+ assert.deepEqual(rememberReceiptCode(JSON.stringify(['ABCD-1234-5678-90AB-CDEF']),'AB3K7X'),['AB3K7X','ABCD-1234-5678-90AB-CDEF']);
+});

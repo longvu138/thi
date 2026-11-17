@@ -16,7 +16,7 @@ test("mục có roles chỉ hiện với vai trò được khai báo", () => {
 });
 
 test("tiêu đề trang theo route", () => {
-  assert.equal(getRouteTitle("/login"), "Vào thi");
+  assert.equal(getRouteTitle("/"), "Vào thi");
   assert.equal(getRouteTitle("/home"), "Trang chủ");
   assert.equal(getRouteTitle("/khong-ton-tai"), "");
   assert.equal(formatDocumentTitle("Trang chủ"), "Trang chủ · Trắc Nghiệm Trực Tuyến");
@@ -34,7 +34,7 @@ test("Quản lý tài khoản chỉ dành cho ADMIN", () => {
 });
 
 test("Người dự thi vào danh sách đợt kiểm tra, ADMIN có đăng nhập riêng",()=>{
- assert.equal(getDefaultAuthenticatedPath({role:"USER"}),"/exam-rounds");assert.equal(getDefaultAuthenticatedPath({role:"ADMIN"}),"/admin/exam-rounds");assert.equal(getRouteTitle("/admin/login"),"Đăng nhập quản trị");
+ assert.equal(getDefaultAuthenticatedPath({role:"USER"}),"/");assert.equal(getDefaultAuthenticatedPath({role:"ADMIN"}),"/admin/exam-rounds");assert.equal(getRouteTitle("/admin/login"),"Đăng nhập quản trị");
 });
 
  test("Kết quả cá nhân chỉ cho USER và có tiêu đề riêng cho lượt thi",()=>{
@@ -47,4 +47,13 @@ test("Người dự thi vào danh sách đợt kiểm tra, ADMIN có đăng nh�
 test("Báo cáo theo đợt có tiêu đề riêng trong khu ADMIN",()=>{
  assert.equal(getRouteTitle("/admin/exam-rounds/test/reports"),"Báo cáo đợt kiểm tra");
  assert.equal(canAccessNavItem({role:"USER"},"admin-rounds"),false);
+});
+test('Phiếu kết quả không còn là menu riêng của Admin',()=>{
+ assert.equal(canAccessNavItem({role:'ADMIN'},'admin-receipts'),false);
+ assert.equal(canAccessNavItem({role:'USER'},'admin-receipts'),false);
+ assert.equal(getRouteTitle('/admin/guide'),'');
+});
+
+test('Menu Admin chỉ còn Đợt kiểm tra và Tài khoản',()=>{
+ assert.deepEqual(getVisibleNavItems({role:'ADMIN'}).map(item=>item.label),['Đợt kiểm tra','Tài khoản']);
 });

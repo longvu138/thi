@@ -11,19 +11,19 @@ const loadKnexConfig = ({ max, min } = {}) => {
   return require(modulePath);
 };
 
-test("pool MySQL mặc định phù hợp shared hosting", () => {
+test("pool MySQL mặc định development 3, production 20", () => {
   const config = loadKnexConfig();
   assert.equal(config.development.pool.min, 0);
   assert.equal(config.development.pool.max, 3);
-  assert.equal(config.production.pool.max, 3);
+  assert.equal(config.production.pool.max, 20);
   assert.equal(config.production.pool.idleTimeoutMillis, 30000);
 });
 
-test("pool MySQL không cho cấu hình vượt quá bốn kết nối", () => {
+test("pool MySQL không cho cấu hình vượt quá 50 kết nối", () => {
   const config = loadKnexConfig({ max: 99, min: 99 });
   assert.equal(config.development.pool.min, 1);
-  assert.equal(config.development.pool.max, 4);
-  assert.equal(config.production.pool.max, 4);
+  assert.equal(config.development.pool.max, 50);
+  assert.equal(config.production.pool.max, 50);
 });
 
 test("kết nối MySQL luôn dùng UTC, không phụ thuộc múi giờ máy chủ", () => {

@@ -10,10 +10,3 @@ export const bestPercentage=(rows,isTrial=false)=>{
  const scores=rows.filter(r=>Boolean(r.isTrial)===isTrial&&['SUBMITTED','EXPIRED'].includes(r.status)&&r.percentage!==null&&r.percentage!==undefined).map(r=>Number(r.percentage)).filter(Number.isFinite);
  return scores.length?Math.max(...scores):null;
 };
-export const roundReadiness=round=>[
- {key:'questions',label:'Có câu hỏi hợp lệ',ready:Number(round?.validQuestionCount)>0,tab:'questions'},
- {key:'structure',label:'Cơ cấu đủ câu',ready:Number(round?.questionCount)>0&&round?.structureSufficient===true,tab:'structure'},
- {key:'start',label:'Đã đặt thời gian bắt đầu',ready:Boolean(round?.startAt),tab:'overview'},
- {key:'end',label:'Đã đặt thời gian kết thúc',ready:Boolean(round?.endAt),tab:'overview'},
- {key:'status',label:`Trạng thái: ${round?.status==='OPEN'?'Đang mở':round?.status==='CLOSED'?'Đã đóng':'Bản nháp'}`,ready:round?.status==='OPEN',tab:'overview'},
-];

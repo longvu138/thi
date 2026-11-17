@@ -8,7 +8,7 @@ import '../pages/auth/participant-entry.css';
 import './participant-layout.css';
 export const ParticipantLayout=({currentUser=null,onLogout,themeMode})=>{
  const {pathname}=useLocation();const taking=isTakingAttempt(pathname);
- const brand=<><img src="/favicon.svg" width="48" height="48" alt="Biểu trưng VPTW"/><span><strong>{APP_NAME}</strong><small>{APP_DESCRIPTION}</small></span></>;
+ const brand=<><span><strong>{APP_NAME}</strong><small>{APP_DESCRIPTION}</small></span></>;
  return <div className="participant-portal participant-session">
   <header className="participant-portal-header"><div className="participant-portal-header-inner">
    {taking?<div className="participant-brand">{brand}</div>:<Link to="/exam-rounds" className="participant-brand" aria-label={`${APP_NAME} - Trang chủ`}>{brand}</Link>}

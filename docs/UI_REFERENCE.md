@@ -92,4 +92,4 @@ Tái sử dụng FormModal, Button và Space hiện có, không thêm CSS/token.
 
 ## Giai đoạn 13: hướng dẫn dự thi
 
-Trang /guide công khai, Admin /admin/guide dùng Card/Space/Button/Input và typography hiện có, không có hệ token mới. QR SVG origin thực, hướng dẫn và đầu mối từ cấu hình do Admin lưu; CSS print A4 15mm, nền trắng, ẩn nút. Rà soát code có co chiều rộng, bẻ URL và QR 160px; browser, dark mode, desktop/tablet/mobile và bản in A4/scan QR chưa kiểm theo chính sách người dùng tự kiểm UI.
+Đã bỏ trang /guide và /admin/guide theo yêu cầu đơn giản hóa (xem frontend/README.md).

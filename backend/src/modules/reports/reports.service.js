@@ -14,11 +14,11 @@ const participantQuery = (trx, roundId, filters) => {
  return query.groupBy('u.id','u.full_name','u.party_committee','u.party_branch')
   .select('u.id','u.full_name','u.party_committee','u.party_branch').count('* as used')
   .select(trx.raw("COALESCE(SUM(a.result = 'PASS'),0) as passed"),trx.raw("COALESCE(SUM(a.status = 'IN_PROGRESS'),0) as active"))
-  .max('a.percentage as best_percentage').max('a.started_at as latest_at');
+  .max('a.submitted_at as latest_submitted_at').max('a.percentage as best_percentage').max('a.started_at as latest_at');
 };
 const person = (row,round,now) => ({userId:row.id,fullName:row.full_name,partyCommittee:row.party_committee||'',partyBranch:row.party_branch||'',examRoundId:round.id,title:round.title,
  usedAttempts:Number(row.used),maxAttempts:Number(round.max_attempts),bestPercentage:row.best_percentage===null?null:Number(row.best_percentage),
- finalResult:finalResult(round,row,now),latestAt:toIsoUtc(row.latest_at)});
+ finalResult:finalResult(round,row,now),latestAt:toIsoUtc(row.latest_at),latestSubmittedAt:toIsoUtc(row.latest_submitted_at)});
 const eachPerson = async (trx,round,filters,now,visit) => {
  let cursor;
  while(true){
@@ -80,11 +80,20 @@ const read = async (id,query,work) => {
   try{await committees.prepareFilter(trx,id,filters);return await work({trx,round,filters,now});}finally{await committees.cleanup(trx);}
  },{isolationLevel:'repeatable read'});
 };
+const sortedPeopleQuery=(trx,round,filters,now)=>{
+ const grouped=participantQuery(trx,round.id,filters);
+ const query=trx.select('p.*').from(grouped.as('p'));
+ if(filters.result)query.where(finalResultSql(trx,round,now),filters.result);
+ return query.orderBy('p.latest_submitted_at',filters.order).orderBy('p.id','asc').limit(filters.pagination.limit).offset(filters.pagination.offset);
+};
 const results = (id,query) => read(id,query,async ({trx,round,filters,now})=>{
- const items=[];const stats=await statistics(trx,round,filters,now,(row,index)=>{if(index>=filters.pagination.offset&&items.length<filters.pagination.limit)items.push(row);});
+ let items=[];
+ const latest=filters.sort==='latestAt';
+ const stats=await statistics(trx,round,filters,now,(row,index)=>{if(!latest&&index>=filters.pagination.offset&&items.length<filters.pagination.limit)items.push(row);});
+ if(latest)items=(await sortedPeopleQuery(trx,round,filters,now)).map(row=>({...person(row,round,now),latestAt:toIsoUtc(row.latest_submitted_at)}));
  return {round:{id:round.id,title:round.title},isTrial:filters.isTrial,statistics:stats,items,pagination:buildPagination(filters.pagination,stats.participantCount)};
 });
 const stats = (id,query) => read(id,query,async ({trx,round,filters,now})=>({isTrial:filters.isTrial,...await statistics(trx,round,filters,now)}));
 const questions = (id,query) => read(id,query,async ({trx,round,filters,now})=>({isTrial:filters.isTrial,...await questionPage(trx,round,filters,now)}));
 const committees=(id,query)=>read(id,query,({trx,round,filters,now})=>require('./committees.service').page(trx,round,filters,now));
-module.exports={committees,read,results,stats,questions,statistics,eachPerson,questionPage};
+module.exports={sortedPeopleQuery,committees,read,results,stats,questions,statistics,eachPerson,questionPage};

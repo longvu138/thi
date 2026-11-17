@@ -36,7 +36,7 @@ Output build nằm trong `dist/`. `pnpm preview` phục vụ bản build tại h
 ## Khung ứng dụng
 
 - `app/App.jsx` chỉ cấp provider/theme (light/dark); phiên đăng nhập (khởi tạo `/auth/me` một lần, đăng nhập/đăng xuất) nằm ở `hooks/useAuthSession.js`. Cache React Query bị `queryClient.clear()` khi đăng xuất, khi phiên bị xóa (401) và trước khi gán người dùng mới. Error Boundary bọc ngoài cùng trong `main.jsx` và trong ConfigProvider.
-- `api/httpClient.js` gửi cookie (`withCredentials`), tự lưu `csrfToken` từ response và gắn header `X-CSRF-Token` cho request ghi; 401 xóa phiên và chuyển về `/login`; 403 phát sự kiện `api-forbidden` để hiển thị thông báo.
+- `api/httpClient.js` gửi cookie (`withCredentials`), tự lưu `csrfToken` từ response và gắn header `X-CSRF-Token` cho request ghi; 401 xóa phiên và chuyển về `/`; 403 phát sự kiện `api-forbidden` để hiển thị thông báo.
 - `app/navigation.js` là nguồn duy nhất cho menu (sidebar, thanh dưới mobile), điều kiện vào route theo vai trò (`roles: ["ADMIN"]`…) và tiêu đề tab (`<Trang> · Kiểm tra nhận thức`). Menu chỉ để hiển thị; phân quyền thật ở backend. Biểu tượng menu ở `components/layout/navIcons.jsx`. Nhãn vai trò ở `constants/roles.js`.
 - Layout chọn cây desktop/mobile bằng `hooks/useMediaQuery.js` (breakpoint 768px). Nút "Làm mới dữ liệu" trên mobile refetch các query đang hiển thị.
 - `QueryErrorState` hiển thị lỗi tải dữ liệu kèm "Mã tra cứu" (`X-Request-Id`). Thông báo thao tác dùng `hooks/useFeedback.js`.
@@ -69,11 +69,11 @@ Các form quản trị và import dùng chung `components/common/FormModal.jsx`:
 
 ## Trang vào thi và đăng nhập quản trị
 
-`pages/auth/LoginPage.jsx` là form họ tên/đảng bộ/chi bộ tự nhập tại `/login`, gọi `/auth/enter` và chuyển USER tới `/exam-rounds`. `pages/auth/AdminLoginPage.jsx` giữ form tài khoản/mật khẩu tại `/admin/login`. Khi đổi người/đăng xuất vẫn xóa cache React Query. Sai thông tin đăng nhập không tự chuyển trang; khi phiên hết hạn trên route quản trị thì đưa về `/admin/login`, các route khác về `/login`. Quản lý tài khoản hiển thị đảng bộ/chi bộ của người dự thi, ẩn username kỹ thuật và trường mật khẩu/chuyển vai trò cho loại người dùng này.
+`pages/auth/LoginPage.jsx` là form họ tên/đảng bộ/chi bộ tự nhập tại `/`, gọi `/auth/enter` và vào thẳng `/attempts/:id` khi có một đợt khả dụng. `pages/auth/AdminLoginPage.jsx` giữ form tài khoản/mật khẩu tại `/admin/login`. Khi đổi người/đăng xuất vẫn xóa cache React Query. Sai thông tin đăng nhập không tự chuyển trang; khi phiên hết hạn trên route quản trị thì đưa về `/admin/login`, các route khác về `/`. Quản lý tài khoản hiển thị đảng bộ/chi bộ của người dự thi, ẩn username kỹ thuật và trường mật khẩu/chuyển vai trò cho loại người dùng này.
 
 ## Nhận diện Trắc Nghiệm Trực Tuyến
 
-Tên dùng chung tại `constants/app.js`; favicon/biểu trưng chữ VPTW ở `public/favicon.svg`. Trang vào thi dùng `pages/auth/participant-entry.css`: header đỏ–vàng (không có nút đăng nhập quản trị; truy cập trực tiếp `/admin/login`), nền kem, giới thiệu/form hai cột và một cột dưới 768px, có light/dark. Phân tích nguồn tham khảo và giới hạn phạm vi trong `../docs/UI_REFERENCE.md`. Không lấy số liệu cố định hoặc backend Supabase từ mẫu.
+Tên dùng chung tại `constants/app.js`; đã bỏ logo và favicon, chỉ hiển thị tên bằng chữ. Trang vào thi dùng `pages/auth/participant-entry.css`: header đỏ–vàng (không có nút đăng nhập quản trị; truy cập trực tiếp `/admin/login`), nền kem, giới thiệu/form hai cột và một cột dưới 768px, có light/dark. Phân tích nguồn tham khảo và giới hạn phạm vi trong `../docs/UI_REFERENCE.md`. Không lấy số liệu cố định hoặc backend Supabase từ mẫu.
 
 Giai đoạn 4 chỉ bổ sung `trialStartAt` vào cấu hình/chi tiết đợt và nhãn Chạy thử theo thời gian hiện tại; thời gian vẫn chuyển UTC. Đã có màn làm bài ở giai đoạn 5; trang kết quả chi tiết thuộc giai đoạn 6.
 
@@ -101,7 +101,7 @@ Chạy `pnpm dev`, mở http://localhost:3110, vào bằng thông tin USER đã 
 
 ## Khung cổng người dự thi
 
-`layouts/ParticipantLayout.jsx` được `AppLayout` chọn cho USER qua `participantLayoutRules.js`; ADMIN tiếp tục dùng DesktopAppLayout/MobileAppLayout. USER dùng cùng nhận diện với trang nhập thông tin: header đỏ–vàng, biểu trưng VPTW, nền kem, nội dung giữa màn hình rộng tối đa 1240px, không có sidebar hoặc thanh dưới của khu quản trị. Điều hướng **Đợt kiểm tra / Kết quả của tôi** nằm trên nội dung ở cả desktop/mobile. Nút Đổi người dự thi sử dụng logout hiện có.
+`layouts/ParticipantLayout.jsx` được `AppLayout` chọn cho USER qua `participantLayoutRules.js`; ADMIN tiếp tục dùng DesktopAppLayout/MobileAppLayout. USER dùng cùng nhận diện với trang nhập thông tin: header đỏ–vàng, tên hệ thống bằng chữ, nền kem, nội dung giữa màn hình rộng tối đa 1240px, không có sidebar hoặc thanh dưới của khu quản trị. Điều hướng **Đợt kiểm tra / Kết quả của tôi** nằm trên nội dung ở cả desktop/mobile. Nút Đổi người dự thi sử dụng logout hiện có.
 
 Khi ở URL làm bài, ẩn liên kết điều hướng/đổi người để hạn chế rời bài nhầm. Đồng hồ và nút Nộp giữ sticky, đáp án là thẻ A/B/C/D có trạng thái chọn/focus, bảng câu có thông tin người thi và thanh tiến độ trên desktop, chuyển xuống dưới trên tablet/mobile. CSS chỉ scope trong `.participant-session`, tái sử dụng token/nhận diện từ `pages/auth/participant-entry.css`. API, hàng đợi tự lưu, snapshot, chấm điểm và quyền sở hữu không thay đổi. Không dùng cơ chế localStorage của source tham khảo.
 
@@ -127,7 +127,7 @@ Giai đoạn 8: tạo Nháp chưa cần câu hỏi → mở chi tiết → tab C
 
 Danh sách USER hiển thị đợt mở/đóng theo API, ưu tiên lượt đang làm, đợt đang thi/chạy thử rồi đợt tương lai và đã kết thúc. Mỗi thẻ có lượt chính thức đã dùng/tối đa/còn lại, kết quả cuối và lý do khóa nút. Bắt đầu lượt mới mở hộp xác nhận đầy đủ cấu hình và danh tính; chỉ gọi start khi xác nhận. Có lượt đang làm thì **Tiếp tục làm bài** vào thẳng lượt đó. USER không có nút QR. ADMIN đăng nhập vào `/admin/exam-rounds`, có QR ở danh sách và chi tiết; `RoundQrModal` dùng QRCode Ant Design, hỗ trợ tải PNG và in, không gửi dữ liệu sang dịch vụ QR ngoài.
 
-QR chỉ chứa `/login?continue=/exam-rounds/<uuid>` trên website đã chọn, không chứa danh tính/cookie/đáp án. Điện thoại chưa có phiên nhập thông tin rồi được đưa đến đúng đợt; đã đăng nhập USER thì mở chi tiết ngay. Chỉ cho trở lại đường dẫn UUID lượt thi hoặc đợt hợp lệ, không nhận URL ngoài/route ADMIN. Không tự bắt đầu hoặc chuyển lượt đang làm từ máy khác.
+QR chỉ chứa `/?continue=/exam-rounds/<uuid>` trên website đã chọn, không chứa danh tính/cookie/đáp án. Điện thoại chưa có phiên nhập thông tin rồi được đưa đến đúng đợt; đã đăng nhập USER thì mở chi tiết ngay. Chỉ cho trở lại đường dẫn UUID lượt thi hoặc đợt hợp lệ, không nhận URL ngoài/route ADMIN. Không tự bắt đầu hoặc chuyển lượt đang làm từ máy khác.
 
 Mặc định địa chỉ QR theo `VITE_PUBLIC_APP_URL` nếu đặt, hoặc origin hiện tại. Trong modal có thể đổi sang tên miền/IP mạng nội bộ. Localhost trên điện thoại là chính điện thoại nên không dùng để truy cập máy tính. Với dev LAN: mở website qua `http://<IP_MAY_TINH>:3110`, đặt `VITE_API_BASE_URL=http://<IP_MAY_TINH>:3108/api`, thêm origin frontend đó vào `CORS_ALLOWED_ORIGINS` backend, rồi khởi động lại tiến trình đã đổi biến. Hai thiết bị cùng mạng và cổng phải truy cập được. Không dùng URL tunnel hoặc công khai server tự động. QR không làm thay đổi quy tắc thời gian/quyền/lượt thi tại backend.
 
@@ -167,6 +167,90 @@ Router dùng `createBrowserRouter` với cây route hiện hữu để hỗ tr�
 
 Tự thử: chọn A, đổi B khi mạng chậm, chờ tải lại đề và nộp — B phải giữ nguyên; thử Back/link rồi chọn “Ở lại làm bài”; thử “Rời trang” rồi quay lại; thử F5/đóng tab; nộp thành công phải sang kết quả không bị hộp xác nhận rời bài. AI chỉ chạy unit/lint/build, không kiểm UI theo chính sách hiện hành.
 
-## Hướng dẫn dự thi (giai đoạn 13)
+## Trang hướng dẫn đã bỏ
 
-`/guide` công khai, in A4 với QR cổng `/login`; link tại trang vào thi. Admin mở `/admin/guide` từ menu để lưu đầu mối hỗ trợ (tối đa 1000 ký tự), dùng API qua `guideApi`/`useGuide`. Giữ Card/Space/Form và token hiện có. Nội dung lưu tại volume cấu hình Backend, không lưu secret vào frontend. Chưa kiểm browser/print thật; người dùng tự kiểm desktop/tablet/mobile, in A4 và QR qua địa chỉ IP/domain thực.
+Theo yêu cầu đơn giản hóa, bỏ trang `/guide`, `/admin/guide`, menu Cài đặt chung và liên kết In hướng dẫn trên cổng vào. Xóa component/CSS/hook/API client frontend không còn dùng. Không thay đổi API Backend hay dữ liệu cấu hình hỗ trợ đã lưu. Menu Admin hiện chỉ Đợt kiểm tra / Tài khoản.
+
+### Vào thẳng đợt duy nhất
+
+Cổng dự thi: sau khi điền thông tin và bấm **Vào thi**, nếu chỉ có một đợt khả dụng thì bắt đầu bài ngay (hoặc tiếp tục lượt đang làm). Backend vẫn kiểm tra thời gian, giới hạn lượt và điều kiện bắt đầu. Đợt đã chọn ở cổng vào được mở trực tiếp, không qua danh sách. Nếu chưa chọn và có nhiều đợt, giữ luồng danh sách hiện có. Nếu không thể bắt đầu hoặc API lỗi, hiện lý do tại form, không tự chuyển sang danh sách. Đặt `DIRECT_SINGLE_ROUND_ENTRY=false` trong `src/utils/participantEntry.js` để dùng lại luồng chọn đợt. Ở câu cuối, nút **Câu sau** đổi thành **Nộp bài**, vẫn mở hộp xác nhận nộp.
+
+Tự thử: một đợt đang mở → nhập thông tin → Vào thi → câu hỏi; quay lại cùng thông tin phải tiếp tục lượt cũ. Kiểm tra thêm hết lượt, nhiều đợt và nút Nộp bài ở câu cuối trên mobile/desktop.
+
+Cổng người thi chỉ dùng route `/`; đã bỏ route `/login`. QR website/đợt, đăng xuất và chuyển hướng hết phiên đều dùng `/`. Admin dùng `/admin/login`.
+
+Màn kết quả `/attempts/:id/result`: ưu tiên Đạt/Không đạt, tỷ lệ và số câu đúng; chỉ giữ thống kê bổ sung sai/bỏ trống/thời gian. Mã tra cứu và In phiếu đặt cùng khối kết quả; câu trả lời nằm trong mục thu gọn “Xem lại câu trả lời”. Người dùng tự kiểm trên mobile/desktop, light/dark.
+
+Kết quả: nút **Lưu / In phiếu** mở modal trên cùng trang, không tự in hoặc tải. Tải PDF tạo file A4 một trang, tự co theo kích thước phiếu và giữ tỷ lệ. PDF dùng ảnh độ phân giải 2x của phiếu để giữ tiếng Việt; không cần gửi dữ liệu sang dịch vụ ngoài. Không hiển thị số thứ tự/số lượt còn lại tại màn kết quả.
+
+Mã xác nhận phiếu mới gồm 6 ký tự chữ in hoa/số (tránh ký tự dễ nhầm). Unique index và cơ chế sinh lại khi trùng vẫn giữ nguyên. Mã dài đã cấp vẫn tra cứu được, không đổi dữ liệu phiếu cũ, không cần migration.
+
+### Admin in lại phiếu
+
+Menu **Phiếu kết quả** tại `/admin/receipts`: danh sách có phân trang, tìm chính xác theo mã mới 6 ký tự hoặc mã cũ, xem/in lại và tải PDF cùng mẫu người thi. API ADMIN: `GET /api/admin/receipts?page=1&limit=20&code=AB3K7X`, `GET /api/admin/receipts/:attemptId`. Chỉ đọc snapshot phiếu đã lưu, không tạo/chấm lại lượt; có audit khi liệt kê/xem. Không có danh sách phiếu công khai cho USER. Không cần migration.
+
+Tự thử: Admin → Phiếu kết quả → tìm mã → Xem / In phiếu → In phiếu hoặc Tải PDF; thử mã không tồn tại và mã sai. USER gọi hai API ADMIN phải 403, chưa đăng nhập 401. Danh sách chỉ có phiếu đã được cấp; lượt chưa kết thúc không có phiếu.
+
+### Giai đoạn 15 — cửa sổ phiếu dùng chung
+
+- `components/receipts/ReceiptModal.jsx`: dùng `FormModal`, `ReceiptSheet` và helper `receiptDownload`. Máy tính có In phiếu (chính)/Tải PDF; mobile có Lưu ảnh phiếu (chính)/Tải PDF. PNG hiện ngay trong modal để nhấn giữ lưu, có liên kết tải PNG nếu trình duyệt hỗ trợ download.
+- Zalo/Facebook/Messenger được nhận biết bằng user agent: người thi không thấy In phiếu, có hướng dẫn mở Chrome/Safari; lỗi PDF gợi ý lưu ảnh. Đây là nhận biết theo UA, không bảo đảm mọi phiên bản ứng dụng đều giữ dấu nhận diện.
+- Kết quả chỉ có một nút chính Lưu / In phiếu trong khối đầu, mã và giải thích một lần; thi tiếp ở card riêng khi Backend cho phép. Lịch sử/danh sách đợt là liên kết nhỏ; câu trả lời thu gọn.
+- `/attempts/:id/receipt` (kể cả URL có `action=print|download` cũ) replace về `/attempts/:id/result`, mở modal, không tự in/tải. Đóng vẫn ở kết quả. Không sinh đường dẫn tự in/tải nữa.
+- `/receipts`: bấm mã đã lưu tra cứu ngay qua API hiện có; tra cứu thành công mở cùng modal. Danh sách lượt trong Lịch sử cá nhân có nút Phiếu cho lượt đã chốt. Admin dùng cùng modal với In phiếu/Tải PDF.
+- CSS in dùng trang A4 riêng `receipt-sheet-page`, `@page margin:0`, lề trong tờ phiếu, chỉ ẩn nội dung ứng dụng/modal khi đang mở phiếu (không ảnh hưởng in hướng dẫn/QR), co tờ phiếu dài để nằm trên một trang. Nội dung `ReceiptSheet`, mã, điểm, snapshot và API không thay đổi. PDF vẫn là ảnh 2x trong một trang A4; không gửi phiếu sang dịch vụ ngoài.
+
+Chạy kiểm tra code: `cd frontend && pnpm test && pnpm lint && pnpm build`.
+
+Tự thử sau `pnpm dev`:
+1. Mở một kết quả: Lưu / In phiếu không đổi URL/không tự in; đóng giữ nguyên trang. Mã chỉ giải thích một lần.
+2. Chrome máy tính: mở modal → In phiếu; xem trước đúng một trang A4 và không đầu/chân trang. Thử tên/đơn vị/tiêu đề dài và phiếu chạy thử. Tải PDF phải có đủ nội dung.
+3. Android Chrome và iPhone Safari: Lưu ảnh phiếu → nhấn giữ lưu ảnh, thử thêm Tải ảnh PNG/Tải PDF. Kiểm tra sáng/tối, màn nhỏ và xoay ngang.
+4. Zalo trên Android/iPhone, Facebook/Messenger: không có nút in cho người thi, có hướng dẫn Chrome/Safari, thử PDF và lựa chọn lưu ảnh khi lỗi.
+5. Chưa đăng nhập: `/receipts` → bấm mã đã lưu hoặc nhập mã → modal. Thử mã sai/không tồn tại, đóng và tra cứu mã khác, xóa mã đã lưu.
+6. Lịch sử đợt → Phiếu chỉ có ở lượt đã chốt. Mở URL phiếu cũ có cả hai loại action, kiểm tra replace/không tự in. Admin tìm mã → modal chỉ In phiếu/Tải PDF.
+
+Kết quả kiểm tra giai đoạn 15: 101/101 unit test frontend PASS; lint PASS; build PASS. Rà code theo checklist modal/viewport/token/loading/error và phân vai đã thực hiện. SKIP toàn bộ browser, in thực tế, Android Chrome, iPhone Safari, Zalo Android/iOS, Facebook/Messenger theo yêu cầu chỉ kiểm tra code; chưa xác nhận kết quả in/lưu file thực tế trên các thiết bị này. Không kết nối DB, không chạy integration DB vì chỉ đổi frontend.
+
+### Giai đoạn 16 — chi tiết đợt Admin (bố cục đã thay ở giai đoạn 17)
+
+Trang `/admin/exam-rounds/:id` dùng header gọn: liên kết danh sách, tên/trạng thái, thời gian và đếm ngược. Một nút chính Mở/Đóng đợt qua `RoundStatusModal` hiện có; mobile gom QR/Báo cáo/Sửa vào menu ⋯.
+
+- Nháp và Đã đóng chưa có lượt chính thức dùng Steps: thông tin/thời gian → câu hỏi → cơ cấu → mở. Bước 1 mở sửa, bước 2–3 chuyển tab. Tooltip Mở đợt liệt kê thiếu giờ bắt đầu/kết thúc, giờ kết thúc đã qua hoặc cơ cấu thiếu câu; form/status API Backend giữ nguyên.
+- Mặc định Nháp chọn tab đầu chưa xong; Đang mở/Đã đóng chọn Thông tin. Tab lưu `?tab=overview|questions|structure`, giữ các query khác khi đổi tab, F5 giữ tab. Thông tin chia Thời gian/Cách thi/Tùy chọn.
+- Câu hỏi bỏ card/tiêu đề lồng, có Import Excel và Thêm câu hỏi; menu ⋯ chứa mẫu/xuất Excel. Import thành công ở BY_GROUP nếu có nghị quyết mới chưa phân bổ thì hiện thông báo với nút Sang Cơ cấu đề.
+- Cơ cấu: Alert khóa theo API `locked` (chỉ lượt chính thức); nhóm mới định mức 0 nổi lên đầu **chỉ ở giao diện**, vẫn giữ thứ tự sinh đề và nút đổi thứ tự theo dữ liệu gốc. Thanh tổng/xem mẫu/lưu sticky dưới tab. Không tự sửa dữ liệu cơ cấu khi sắp hiển thị.
+- Đang mở/Đã đóng đọc báo cáo `isTrial=false`; số người tham gia và tỷ lệ đạt lấy đúng API. Khi đang mở refresh báo cáo/đợt/cơ cấu khoảng 30 giây (không tự lưu form). Có lượt chính thức hiện cảnh báo cơ cấu khóa và sửa câu chỉ cho lượt sau.
+
+**Ghi nhận lịch sử giai đoạn 16, đã giải quyết ở giai đoạn 17 bằng summary theo lô:** API báo cáo khi đó trả participantCount, passedCount, failedCount, incompleteCount, passRate, attemptCount, averageAttempts; không có số lượt đang làm và đã nộp. Hai ô này hiển thị “—” và giải thích thiếu dữ liệu, không dùng incompleteCount để giả làm số đang làm. Hoàn thiện hai số này cần Backend cung cấp thêm số liệu, ngoài phạm vi “chỉ giao diện/không đổi API” của giai đoạn này. Không gọi lịch sử riêng từng người để tránh hàng nghìn request mỗi chu kỳ.
+
+Phần Admin giai đoạn 16 và các helper/test Steps/tab cũ đã được dọn sau khi thay bằng giai đoạn 17; xem source hiện hành ở mục giai đoạn 17. `ExamRoundDetailPage` hiện chỉ phục vụ người thi. Test pool vẫn giữ đúng dev 3, production 20, trần 50.
+
+Tự thử: `pnpm dev` → Admin → chi tiết đợt. Đối chiếu Nháp chưa câu/thiếu cơ cấu/đủ cơ cấu, Đang mở, Đã đóng có/chưa có lượt; bấm từng Steps, tooltip Mở, hộp xác nhận, đổi tab/F5, import nhóm mới, sắp nhóm và lưu, khóa sau lượt chính thức. Kiểm tra desktop 1440 và mobile 390 (menu ⋯, card câu hỏi, thanh sticky), light/dark. Không dùng dữ liệu thật để thử.
+
+Đã chạy frontend: 106 test PASS, lint PASS, build PASS. Backend `pnpm test`: 108 PASS, 0 FAIL, 9 SKIP (suite integration cần DB test trống và dựng/xóa schema, không chạy trên DB dev). Lần chạy trong sandbox bị EPERM ở HTTP/OS; chạy lại ngoài sandbox với TEST_*DB_NAME không bật đã PASS. Không kết nối DB, tạo/reset/migrate/seed DB. Browser/đối chiếu trực quan 1440/390 SKIP theo chính sách chỉ kiểm tra code; checklist UI đã rà qua code.
+
+### Giai đoạn 17 — danh sách và tổng quan đợt Admin
+
+Route hiện hành `/admin/exam-rounds/:id?` dùng `AdminRoundsWorkspace` thay bố cục giai đoạn 16: >=1200px danh sách trái cuộn riêng/tổng quan phải; dưới 1200px danh sách → tổng quan. Chọn dòng giữ workspace và cập nhật URL. Lọc trạng thái có số lượng, search tên/mã phiếu, tạo chỉ hỏi tên. Mở/Đóng/QR/Xóa trên menu mỗi dòng; xóa chỉ khi chưa có lượt kể cả lượt thử. Menu Admin hiện chỉ Đợt kiểm tra / Tài khoản (trang hướng dẫn/Cài đặt chung đã bỏ theo yêu cầu sau giai đoạn 17).
+
+Tổng quan xếp dọc số liệu chính thức/Cần làm, cấu hình, cơ cấu, top 10 đảng bộ theo số tham gia, 10 người vừa nộp, câu hỏi và 5 câu đúng thấp nhất. Các số đang làm/đã nộp không còn dấu “—” như giai đoạn 16: dùng summary Backend mới. Đã nộp bao gồm SUBMITTED và EXPIRED. Tỷ lệ Đạt theo người, không theo lượt; dữ liệu thử không tính. Đợt đang mở cập nhật khoảng 30 giây.
+
+Drawer `?panel=config|structure|results|questions`, toàn màn hình điện thoại. Cấu hình ba nhóm, cảnh báo khi bỏ sửa chưa lưu. Kết quả có bộ lọc inline, xuất Excel theo bộ lọc đã áp dụng, menu xóa thử có xác nhận chỉ ở chế độ thử. Tái sử dụng RoundStructure, RoundQuestions, ReportTables, CommitteeReport, AdminAttemptHistory và modal phiếu. Từ lịch sử lượt có thể mở phiếu Admin để in/tải PDF.
+
+Liên kết cũ reports/tab/receipts được replace về workspace/panel/modal tương ứng, không tự in. F5 giữ panel trên URL. API/hook mới vẫn tách riêng cache Admin/USER và dùng auth/CSRF hiện có.
+
+Code chính:
+- `pages/exam-rounds/AdminRoundsWorkspace.jsx`, `AdminRoundOverviewPage.jsx`, `round-workspace.css`.
+- `components/exam-rounds/RoundConfigPanel.jsx`, `RoundStructure.jsx`; `pages/reports/RoundReportPage.jsx` dùng embedded trong drawer.
+- `utils/adminRoundWorkspace.js` và test; routes/menu, metadata trong normalizeRoundList.
+
+Đã chạy `pnpm test`: **112 PASS**, lint/build **PASS**. Không mở browser. Hướng dẫn tự thử 1440/1024/390, các drawer, deep link/F5 và liên kết cũ: [STAGE17_REVIEW](../docs/STAGE17_REVIEW.md). Tất cả kiểm tra trực quan/thao tác thực tế chưa xác minh theo yêu cầu chỉ kiểm code. Không tạo/reset/seed hoặc thay dữ liệu DB.
+
+Cổng vào thi: bên trái xem trước **nguyên mẫu ReceiptSheet dùng để in/PDF**, thu nhỏ theo chiều rộng, cập nhật họ tên/đảng bộ/chi bộ theo form. Điểm, kết quả, thời gian nộp và mã để trống ở chế độ preview; phiếu thật không thay đổi. Mỗi ô có gợi ý tên đầy đủ/có dấu, không viết tắt. Mobile đặt mẫu trong mục thu gọn sau form để không đẩy form xuống sâu. Chỉ dữ liệu trên màn hình, không lưu thêm thông tin cá nhân hoặc đổi payload/API/phiếu thật. Tự thử: nhập/xóa từng ô, xem mẫu thay đổi; kiểm tra mobile/sáng-tối bằng tay.
+
+### Dọn mã không dùng — 17/11/2026
+
+Đã xóa `pages/receipts/AdminReceiptsPage.jsx`, `hooks/useDebouncedValue.js`, `components/exam-rounds/RoundReadiness.jsx`, `AdminRoundOverview.jsx`, `ExamRoundFormModal.jsx`. Hai trang `ExamRoundsPage`/`ExamRoundDetailPage` chỉ giữ luồng USER, Admin dùng workspace giai đoạn 17. Tách `RoundTimeInput.jsx` để cấu hình drawer dùng lại mà không kéo theo form modal cũ. Dọn helper/CSS và ba test riêng của Steps/tab/checklist cũ; giữ test luồng hiện hành và mapping liên kết cũ.
+
+Kiểm tra: 111 test frontend PASS, lint/build PASS. Rà import tương đối từ `main.jsx`: không còn import thiếu hoặc file runtime frontend nằm ngoài cây sử dụng (loại trừ test). Kiểm tra static này không thay thế thử trực quan; không mở browser hoặc kết nối database. Các tài liệu review giai đoạn cũ giữ làm lịch sử, không phải mô tả source hiện hành. Giữ migration, test integration và Docker/deploy/load-test còn được gọi bởi script/tài liệu.

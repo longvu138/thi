@@ -36,6 +36,17 @@ test('Báo cáo ADMIN: nhiều lượt một người, kết quả cuối, bộ 
  }
  const get=async path=>{const r=await call(prefix+path,adminCookie);assert.equal(r.status,200);return r.json();};
  const stats=await get('/statistics');assert.equal(stats.participantCount,2);assert.equal(stats.attemptCount,3);assert.equal(stats.averageAttempts,1.5);assert.equal(stats.passedCount,1);assert.equal(stats.incompleteCount,1);assert.equal(stats.passRate,50);
+ // Stage 17: batch summaries and most recently submitted official participant paging.
+ await db('attempts').where({exam_round_id:round.id,user_id:user.id,is_trial:0}).update({submitted_at:'2026-01-01 01:00:00'});
+ await db('attempts').where({exam_round_id:round.id,user_id:other.id,is_trial:0}).update({submitted_at:'2026-01-01 02:00:00'});
+ await db('attempts').where({id:trial.id}).update({submitted_at:'2099-01-01 00:00:00'});
+ const latest=await get('/results?sort=latestAt&order=desc&limit=1');assert.equal(latest.items[0].userId,other.id);assert.equal(latest.statistics.passRate,50);
+ assert.equal((await get('/results?sort=latestAt&order=desc&limit=1&page=2')).items[0].userId,user.id);
+ const queries=[];const observe=q=>queries.push(q.sql);db.on('query',observe);
+ const summaryList=await rounds.list({status:'OPEN'},{admin:true});db.removeListener('query',observe);
+ const summary=summaryList.items.find(r=>r.id===round.id).summary;
+ assert.equal(summary.submittedCount,3);assert.equal(summary.inProgressCount,0);assert.equal(summary.participantCount,2);assert.equal(summary.passRate,50);assert.equal(summary.attemptCount,3);assert.equal(summary.hasAttempts,true);
+ assert.equal(summaryList.statusCounts.OPEN,1);assert.equal(queries.filter(sql=>sql.includes('from `attempts`')).length,1,'One batched attempts query for the whole list');
  await rounds.update(round.id,{status:'CLOSED'});const closed=await get('/results');assert.equal(closed.statistics.failedCount,1);assert.equal(closed.statistics.passedCount,1);assert.equal(closed.items.find(row=>row.userId===user.id).finalResult,'PASSED');assert.equal(closed.items.find(row=>row.userId===user.id).usedAttempts,2);
  const filter='?partyCommittee=E2E%20%C4%90%E1%BA%A3ng%20A&partyBranch=E2E%20Chi%20A&result=PASSED&search=Ng%C6%B0%E1%BB%9Di';
  const filtered=await get('/results'+filter);assert.equal(filtered.items.length,1);assert.equal(filtered.statistics.attemptCount,2);assert.equal(filtered.items[0].bestPercentage,100);

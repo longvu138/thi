@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-router.use(require('../modules/settings/settings.routes'));
 router.use('/auth', require('../modules/auth/auth.routes'));
 router.get('/admin/questions/template', require('../middlewares/auth.middleware').authenticate, require('../middlewares/auth.middleware').requireAdmin, require('../modules/questions/questions.controller').template);
 router.use('/admin/users', require('../modules/users/users.routes'));
@@ -8,6 +7,7 @@ const examRounds = require('../modules/exam-rounds/exam-rounds.routes');
 router.use('/admin/exam-rounds', examRounds.adminRouter);
 router.get('/public/exam-rounds', require('../modules/exam-rounds/exam-rounds.controller').publicList);
 router.use('/exam-rounds', examRounds.userRouter);
+router.use('/admin/receipts', require('../modules/receipts/receipts.admin.routes'));
 router.use('/receipts', require('../modules/receipts/receipts.routes'));
 router.use('/my-results', require('../modules/attempts/results.routes'));
 router.use('/admin/attempts', require('../modules/attempts/attempts.admin.routes'));

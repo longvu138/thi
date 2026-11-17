@@ -1,3 +1,4 @@
+const {loadSummaries,serializeSummary,missingItems}=require('./admin-summary');
 const { validQuestionQuery } = require('../../utils/valid-questions-query');
 const db = require('../../config/database');
 const { createUuid } = require('../../utils/uuid');
@@ -25,11 +26,13 @@ const decorate = async (rows, client, {admin=false,userId}={}) => {
  if(!rows.length)return [];
  const ids=rows.map(row=>row.id);
  if(admin){
+  const summaries=await loadSummaries(client,ids);
   const counts=await validQuestionQuery(ids,client).select('exam_round_id',client.raw('BINARY category_name as category_name')).count('* as total').groupBy('exam_round_id').groupByRaw('BINARY category_name');
   const map=new Map();for(const item of counts){if(!map.has(item.exam_round_id))map.set(item.exam_round_id,new Map());const groups=map.get(item.exam_round_id),key=groupKey(String(item.category_name));groups.set(key,(groups.get(key)||0)+Number(item.total));}
   return rows.map(row=>{const config=parseSelection(row.selection_config),groups=map.get(row.id)||new Map();const selected=config.mode==='BY_GROUP'?config.groups.filter(g=>g.count>0):null;
    const total=selected?selected.reduce((sum,g)=>sum+(groups.get(groupKey(g.category))||0),0):[...groups.values()].reduce((sum,n)=>sum+n,0);
-   return {...serialize(row),validQuestionCount:total,structureSufficient:selected?selected.length>0&&selected.every(g=>(groups.get(groupKey(g.category))||0)>=g.count):total>=Number(row.question_count)};
+   const value={...serialize(row),summary:summaries.get(row.id)||serializeSummary(),totalValidQuestionCount:[...groups.values()].reduce((sum,n)=>sum+n,0),groupCount:groups.size,validQuestionCount:total,structureSufficient:selected?selected.length>0&&selected.every(g=>(groups.get(groupKey(g.category))||0)>=g.count):total>=Number(row.question_count)};
+   return {...value,missing:missingItems(value)};
   });
  }
  if(!userId)return rows.map(serialize);
@@ -55,13 +58,15 @@ const list = async (query = {}, { admin = false, userId } = {}) => {
  validateQuery(query); if(!admin)await expireOwned(userId); const pagination = parsePagination(query);
  const base = db('exam_rounds');
  if (!admin) base.whereIn('status', ['OPEN', 'CLOSED']);
- if (query.status) base.where({ status: query.status });
  if (query.search) base.where('title', 'like', containsPattern(query.search));
+ const statusRows=admin?await base.clone().select('status').count('* as total').groupBy('status'):[];
+ const statusCounts=Object.fromEntries(['OPEN','DRAFT','CLOSED'].map(status=>[status,Number(statusRows.find(row=>row.status===status)?.total||0)]));
+ if (query.status) base.where({ status: query.status });
  const [{ total }] = await base.clone().count('* as total');
  const ordered=base.clone();
  if(!admin){const now=new Date();if(userId)ordered.orderByRaw("CASE WHEN EXISTS (SELECT 1 FROM attempts a WHERE a.exam_round_id = exam_rounds.id AND a.user_id = ? AND a.status = 'IN_PROGRESS') THEN 0 WHEN status = 'OPEN' AND (end_at IS NULL OR end_at > ?) AND (start_at IS NULL OR start_at <= ? OR trial_start_at <= ?) THEN 1 WHEN status = 'OPEN' AND (end_at IS NULL OR end_at > ?) THEN 2 ELSE 3 END",[userId,now,now,now,now]);}
  const rows = await ordered.orderBy('created_at', 'desc').orderBy('id').limit(pagination.limit).offset(pagination.offset);
- return { items: await decorate(rows,db,{admin,userId}), pagination: buildPagination(pagination, total) };
+ return { items: await decorate(rows,db,{admin,userId}), pagination: buildPagination(pagination, total),...(admin?{statusCounts}:{}) };
 };
 const assertConfiguration=async(id,data,trx)=>{if(data.status==='OPEN')await require('./structure.service').assertCapacity(trx,{id,question_count:data.questionCount,selection_config:data.selectionConfig});};
 const toRow = data => Object.fromEntries(Object.entries(COLUMN_MAP).map(([key, column]) => [column, key==='selectionConfig'?JSON.stringify(data[key]):['trialStartAt', 'startAt', 'endAt'].includes(key) ? toDbDateTime(data[key]) : data[key]]));

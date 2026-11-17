@@ -15,3 +15,16 @@ curl --request GET "http://localhost:3108/api/receipts/lookup"
 # Có hoặc không có cookie đều chỉ tra đúng phiếu của mã; ADMIN không được tìm người qua endpoint này.
 curl --request POST "http://localhost:3108/api/receipts/lookup" --cookie admin.cookies.txt --header "X-CSRF-Token: <CSRF_TOKEN>" --header "Content-Type: application/json" --data '{"code":"<MA_TREN_PHIEU>"}'
 # Quá 30 request/IP/15 phút trả 429. Response no-store; không trả đề/đáp án/ID tài khoản.
+
+# ADMIN: danh sách và tìm chính xác theo mã, hỗ trợ mã cũ và mới
+curl 'http://localhost:3108/api/admin/receipts?page=1&limit=20' -b '<ADMIN_COOKIE>'
+curl 'http://localhost:3108/api/admin/receipts?code=AB3K7X' -b '<ADMIN_COOKIE>'
+# ADMIN: xem/in lại phiếu đã lưu theo attempt ID (404 nếu chưa có phiếu)
+curl 'http://localhost:3108/api/admin/receipts/<ATTEMPT_ID>' -b '<ADMIN_COOKIE>'
+# 422 mã không hợp lệ hoặc ID sai
+curl 'http://localhost:3108/api/admin/receipts?code=bad' -b '<ADMIN_COOKIE>'
+curl 'http://localhost:3108/api/admin/receipts/invalid' -b '<ADMIN_COOKIE>'
+# 401 chưa đăng nhập; 403 USER gọi API ADMIN
+curl 'http://localhost:3108/api/admin/receipts'
+curl 'http://localhost:3108/api/admin/receipts' -b '<USER_COOKIE>'
+curl 'http://localhost:3108/api/admin/receipts/<ATTEMPT_ID>' -b '<USER_COOKIE>'

@@ -7,7 +7,7 @@ const NAV_ICONS = Object.freeze({
   "exam-rounds": CalendarOutlined,
   users: TeamOutlined,
   results: SolutionOutlined,
-  guide: SolutionOutlined,
+  "admin-receipts": SolutionOutlined,
 });
 
 export const NavIcon = ({ navKey, className }) => {

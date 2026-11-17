@@ -1,9 +1,20 @@
-.result-workspace .result-outcome.ant-typography {font-size:32px;margin:12px 0 8px;}
+.result-workspace .result-heading .ant-typography {margin:0;overflow-wrap:anywhere;}
+.result-heading {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.result-hero {display:flex;justify-content:space-between;align-items:center;gap:24px;padding:24px 0;}
+.result-workspace .result-outcome.ant-typography {font-size:32px;margin:0 0 6px;}
 .result-outcome.is-pass {color:#267448;}
 .result-outcome.is-fail {color:var(--portal-red,var(--primary-red));}
 [data-theme="dark"] .result-outcome.is-pass {color:#a2e5bb;}
-.result-score {font-size:18px;}
-.result-receipt {margin:16px 0;overflow-wrap:anywhere;}
-.result-actions {margin-top:12px;}
-.result-next {margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
-@media(max-width:767.98px){.result-workspace .ant-card-body{padding:16px;}.result-workspace .result-outcome.ant-typography{font-size:28px;}.result-actions{width:100%;}}
+.result-score {display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;color:var(--portal-text,var(--text));}
+.result-score>strong {font-size:44px;line-height:1.2;font-variant-numeric:tabular-nums;}
+.result-score small {font-size:22px;}
+.result-score>span {color:var(--portal-muted,var(--text-muted));}
+.result-facts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-block:1px solid var(--portal-border,var(--border));padding:16px 0;}
+.result-facts>div {display:flex;flex-direction:column;gap:4px;min-width:0;overflow-wrap:anywhere;}
+.result-facts span {font-size:13px;color:var(--portal-muted,var(--text-muted));}
+.result-submitted.ant-typography {margin:12px 0;}
+.result-receipt {display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding:12px 16px;background:var(--portal-tint);border-radius:12px;overflow-wrap:anywhere;}
+.result-receipt>.ant-typography:last-child {font-size:12px;}
+.result-actions {margin-top:16px;}
+.result-next .ant-typography {margin-top:0;}
+@media(max-width:767.98px){.result-workspace .ant-card-body{padding:16px;}.result-workspace .result-outcome.ant-typography{font-size:26px;}.result-hero{gap:12px;padding:20px 0;}.result-score>strong{font-size:36px;}.result-facts{gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));}.result-facts>div:last-child{grid-column:1/-1;}.result-actions{width:100%;}}

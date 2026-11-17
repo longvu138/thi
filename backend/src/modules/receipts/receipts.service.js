@@ -23,3 +23,18 @@ const lookup=async body=>{
  return {receipt:serialize(row),receiptId:row.id};
 };
 module.exports={forAttempt,lookup};
+const {parsePagination,buildPagination}=require('../../utils/pagination');
+const {validateAdminQuery}=require('./receipts.validator');
+module.exports.adminList=async query=>{
+ const {code}=validateAdminQuery(query);const page=parsePagination(query);
+ const base=db('attempt_receipts');if(code)base.where({verification_code:code});
+ const [{total}]=await base.clone().count('* as total');
+ const rows=await base.clone().orderBy('created_at','desc').orderBy('id').limit(page.limit).offset(page.offset);
+ return {items:rows.map(row=>({attemptId:row.attempt_id,...serialize(row)})),pagination:buildPagination(page,total)};
+};
+module.exports.adminGet=async id=>{
+ validateId(id);
+ const row=await db('attempt_receipts').where({attempt_id:id}).first();
+ if(!row)throw httpError(404,'Không tìm thấy phiếu kết quả của lượt thi');
+ return serialize(row);
+};

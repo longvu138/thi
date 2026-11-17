@@ -93,7 +93,7 @@ export const AdminLoginPage = ({ onAuthenticated }) => {
                 Đăng nhập
               </Button>
             </Form>
-            <Link to="/login">Quay lại trang người dự thi</Link>
+            <Link to="/">Quay lại trang người dự thi</Link>
           </Space>
         </Card>
       </div>

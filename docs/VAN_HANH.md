@@ -30,7 +30,7 @@ Dữ liệu nằm trong named volume theo `COMPOSE_PROJECT_NAME`: MySQL, log, c�
 
 ## Hướng dẫn phát cho người dự thi
 
-Admin vào **Hướng dẫn dự thi**, nhập đầu mối hỗ trợ rồi Lưu, in A4 hoặc phát đường dẫn `/guide`. Nội dung công khai không chứa secret. QR lấy origin website hoặc `VITE_PUBLIC_APP_URL` ở lúc build. Cấu hình hỗ trợ lưu tại `/app/storage/settings.json` trong volume riêng, không cần migration. Sao lưu cả volume này khi di chuyển máy.
+Hệ thống không còn trang hướng dẫn riêng. Ban tổ chức tự soạn hướng dẫn (cách ghi họ tên/đảng bộ/chi bộ, số lượt, lưu ý mạng yếu, chờ màn kết quả, lưu mã phiếu, đầu mối hỗ trợ) và gửi kèm mã QR lấy từ nút **Mã QR** của đợt trong trang Admin. QR dùng origin website hoặc `VITE_PUBLIC_APP_URL` lúc build.
 
 ## Sao lưu và diễn tập khôi phục
 
@@ -80,13 +80,13 @@ Runner mặc định đo API loopback; lệnh trên dùng `http://web/api` qua C
 ## Checklist theo mốc
 
 - Trước 7 ngày: cấu hình DNS/HTTPS, mở đúng cổng, kiểm đồng hồ NTP, dung lượng, backup ngoài máy và restore diễn tập; chạy đủ tải 1000 trên máy chủ đích, xử lý nếu không đạt ngưỡng.
-- Trước 1 ngày: kiểm nội dung/cơ cấu/số câu/thời gian/lượt, hướng dẫn và đầu mối; làm lượt thử trên điện thoại, in phiếu, tra cứu mã. Backup trước/sau diễn tập, xóa lượt thử bằng API có audit.
+- Trước 1 ngày: kiểm nội dung/cơ cấu/số câu/thời gian/lượt, hướng dẫn phát cho người thi và đầu mối hỗ trợ; làm lượt thử trên điện thoại, in phiếu, tra cứu mã. Backup trước/sau diễn tập, xóa lượt thử bằng API có audit.
 - Trước 1 giờ: kiểm `docker compose ps`, `/api/health`, HTTPS, thời gian, 429/5xx, CPU/RAM/ổ đĩa; backup, chốt cấu hình. Không deploy lúc thi.
 - Trong thi: trực hỗ trợ, theo dõi log/health, tài nguyên và hàng đợi chốt; không reset/restart/migrate tùy tiện. Mất mạng người dùng cần giữ tab, chờ kết quả khi nộp.
 - Sau thi: đóng đợt, chờ lượt chốt, xuất Excel/đối chiếu, backup và sao chép ngoài máy; kiểm restore định kỳ, giới hạn quyền truy cập dữ liệu cá nhân.
 
 ## Cập nhật và sự cố
 
-Backup trước; build/pull phiên bản đã kiểm, khởi động migrate và Backend theo Compose, kiểm health rồi mới phục vụ. `docker compose restart` không cập nhật image/env, cần `up -d` sau build/pull. Nếu migrate thất bại, Backend không được khởi động mới; đọc log, không rollback mù trên dữ liệu thật. `docker compose logs --since 10m backend` chứa dữ liệu vận hành cần bảo mật. Secret giữ nguyên khi cập nhật, đổi có kế hoạch sẽ làm phiên hiện tại mất hiệu lực. Công cụ `backend/scripts/setup-deploy.js` và tài liệu DEPLOY_VPS_DOCKER cũ đã lỗi thời.
+Backup trước; build/pull phiên bản đã kiểm, khởi động migrate và Backend theo Compose, kiểm health rồi mới phục vụ. `docker compose restart` không cập nhật image/env, cần `up -d` sau build/pull. Nếu migrate thất bại, Backend không được khởi động mới; đọc log, không rollback mù trên dữ liệu thật. `docker compose logs --since 10m backend` chứa dữ liệu vận hành cần bảo mật. Secret giữ nguyên khi cập nhật, đổi có kế hoạch sẽ làm phiên hiện tại mất hiệu lực.
 
 Smoke API tự động tùy chọn trong **stack QA riêng đã bật LOAD_TEST_ENABLED**, không dùng production: `docker compose --env-file .env.load exec -T backend node scripts/deploy-smoke.js`. Script xác minh tên DB/handshake trước khi tạo admin ngẫu nhiên và dữ liệu E2E, tạo cả một đợt chính thức giả và một đợt chạy thử, kiểm start/lưu/nộp/kết quả/phiếu/idempotent/giới hạn lượt và quyền cấu hình. Nó không in mật khẩu, ghi UUID fixture tại `/tmp/stage13-fixture.json` trong container. Đây là API smoke, không thay thế thử UI/in/scan QR thủ công.

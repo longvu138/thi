@@ -9,6 +9,7 @@ export const normalizeRound = data => {
  return { ...data };
 };
 export const normalizeRoundList = data => ({
+ ...(data?.statusCounts?{statusCounts:data.statusCounts}:{}),
  items: Array.isArray(data?.items) ? data.items.map(normalizeRound).filter(Boolean) : [],
  pagination: { page: 1, limit: 20, total: 0, ...(data?.pagination || {}) },
 });
@@ -43,7 +44,7 @@ export const buildRoundJoinUrl = (origin, roundId) => {
  try {
   const base = new URL(origin);
   if (!['http:','https:'].includes(base.protocol) || base.username || base.password) return '';
-  const url = new URL('/login',base.origin);
+  const url = new URL('/',base.origin);
   url.searchParams.set('continue',`/exam-rounds/${roundId}`);
   return url.href;
  } catch { return ''; }

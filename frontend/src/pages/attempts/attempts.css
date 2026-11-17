@@ -29,8 +29,8 @@
 .participant-session .attempt-toolbar.ant-card {background:var(--portal-card,var(--panel-bg)) !important;backdrop-filter:none;-webkit-backdrop-filter:none;}
 .attempt-auto-advance {margin-bottom:12px;}
 .attempt-question-drawer .ant-drawer-content {background:var(--portal-card);color:var(--portal-text);}
-.participant-session.attempt-question-drawer .attempt-navigator {position:static;max-height:none;overflow:visible;}
-.attempt-question-drawer.participant-session {min-height:0;}
+.attempt-question-drawer .participant-session .attempt-navigator {position:static;max-height:none;overflow:visible;}
+.attempt-question-drawer-body.participant-session {min-height:0;background:none;}
 @media(max-width:767.98px){
  .attempt-toolbar-row {gap:8px;}
  .attempt-heading {width:100%;min-width:0;}

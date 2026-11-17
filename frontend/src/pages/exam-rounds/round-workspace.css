@@ -1,0 +1,13 @@
+.admin-round-workspace {display:grid;grid-template-columns:minmax(0,1fr);gap:20px;min-width:0;}
+.admin-round-workspace.is-split {grid-template-columns:340px minmax(0,1fr);align-items:start;}
+.is-split .round-workspace-list {position:sticky;top:0;max-height:calc(100dvh - 140px);overflow-y:auto;overscroll-behavior:contain;}
+.round-workspace-overview {min-width:0;}
+.round-workspace-row {cursor:pointer;gap:8px;padding:12px 8px!important;border-radius:8px;}
+.round-workspace-row.is-selected {background:var(--portal-tint,rgba(207,0,17,.06));outline:1px solid var(--border);}
+.round-row-select {border:0;background:none;text-align:left;color:inherit;cursor:pointer;min-width:0;flex:1;font:inherit;padding:0;display:flex;flex-direction:column;gap:6px;}
+.round-row-select strong,.round-row-select span {overflow-wrap:anywhere;}
+.round-row-select span {font-size:12px;color:var(--text-muted);}
+.round-row-select:focus-visible {outline:2px solid var(--primary-red);outline-offset:4px;}
+.round-summary-link.ant-btn {white-space:normal;height:auto;text-align:left;max-width:100%;overflow-wrap:anywhere;}
+.admin-round-panel .ant-drawer-body {min-width:0;}
+@media(max-width:767.98px){.round-workspace-overview>.ant-space{margin-top:12px;}.admin-round-panel .ant-drawer-body{padding:16px;}}

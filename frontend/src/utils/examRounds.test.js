@@ -42,7 +42,7 @@ test('Danh sách người dự thi có cả đợt đã kết thúc, quản tr�
 test('QR giữ đúng đợt và không mang phiên hoặc query máy gốc',()=>{
  const id='11111111-1111-4111-8111-111111111111';
  const value=new URL(buildRoundJoinUrl('https://exam.example.vn/old?token=private#fragment',id));
- assert.equal(value.origin,'https://exam.example.vn');assert.equal(value.pathname,'/login');
+ assert.equal(value.origin,'https://exam.example.vn');assert.equal(value.pathname,'/');
  assert.equal(value.searchParams.get('continue'),`/exam-rounds/${id}`);assert.equal(value.searchParams.size,1);assert.equal(value.hash,'');
  for(const origin of ['javascript:alert(1)','ftp://example.vn','https://user:pass@example.vn','invalid'])assert.equal(buildRoundJoinUrl(origin,id),'');
  assert.equal(buildRoundJoinUrl('https://exam.example.vn','invalid'),'');

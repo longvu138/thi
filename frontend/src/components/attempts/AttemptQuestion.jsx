@@ -1,5 +1,6 @@
+import {nextAction} from '../../utils/participantEntry';
 import {Button,Card,Radio,Space,Typography} from 'antd';
-export const AttemptQuestion=({question=null,index=0,total=0,selected=null,disabled=false,mobile=false,onChoose,onMove})=>{
+export const AttemptQuestion=({question=null,index=0,total=0,selected=null,disabled=false,mobile=false,onChoose,onMove,onSubmit})=>{
  if(!question)return <Card>Đề thi không có câu hỏi để hiển thị.</Card>;
  const options=Array.isArray(question.options)?question.options:[];
  return <Card className="glass-card attempt-question">
@@ -8,6 +9,6 @@ export const AttemptQuestion=({question=null,index=0,total=0,selected=null,disab
   <Radio.Group className="attempt-options" value={selected} disabled={disabled} onChange={event=>onChoose(event.target.value)} aria-label={`Lựa chọn cho câu ${index+1}`}>
    {options.map(option=><Radio key={option.key} value={option.key} className={`attempt-option${selected===option.key?' is-selected':''}`}><strong>{option.key}</strong><span className="attempt-option-text">{option.content}</span></Radio>)}
   </Radio.Group>
-  <Space wrap className="attempt-question-actions"><Button type="link" size="small" disabled={disabled || !selected} onClick={()=>onChoose(null)}>Bỏ chọn</Button>{!mobile&&<Button disabled={index===0} onClick={()=>onMove(-1)}>Câu trước</Button>}{!mobile&&<Button type="primary" disabled={index===total-1} onClick={()=>onMove(1)}>Câu sau</Button>}</Space>
+  <Space wrap className="attempt-question-actions"><Button type="link" size="small" disabled={disabled || !selected} onClick={()=>onChoose(null)}>Bỏ chọn</Button>{!mobile&&<Button disabled={index===0} onClick={()=>onMove(-1)}>Câu trước</Button>}{!mobile&&<Button type="primary" disabled={disabled} onClick={()=>nextAction(index,total)==='submit'?onSubmit():onMove(1)}>{nextAction(index,total)==='submit'?'Nộp bài':'Câu sau'}</Button>}</Space>
  </Card>;
 };

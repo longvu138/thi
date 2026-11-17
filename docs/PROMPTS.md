@@ -4,7 +4,7 @@ Các prompt dưới đây tham chiếu yêu cầu trong `docs/PLAN.md`. Gửi l�
 
 Giai đoạn 4 cần có hàm chấm điểm dùng chung để xử lý nộp bài và tự động hết giờ; giai đoạn 6 hoàn thiện API, giao diện kết quả và lịch sử.
 
-Tiến độ: đã làm xong prompt 1–12. Còn prompt 13 (triển khai và vận hành cho 1000 người) và prompt 14 (hoàn thiện UI/UX). Hai prompt độc lập; nên làm 14 trước để triển khai bản giao diện cuối.
+Tiến độ: đã làm xong prompt 1–16. Tiếp theo gửi prompt 17 (gộp phân hệ Quản lý đợt kiểm tra của Admin: danh sách + trang tổng quan một trang). Triển khai lên hosting theo docs/DEPLOY_HOSTING.md sau khi xong prompt 17.
 
 ## Hướng dẫn chung
 
@@ -491,4 +491,174 @@ Slow 3G, tắt/bật mạng, F5, hết giờ tự chốt; ít nhất một lần
 thoại thật qua Zalo; Admin 1440 và 390 cho chi tiết đợt và hộp Mở
 đợt. Đánh dấu mục đã sửa trong UI_UX_REVIEW_20261115.md, cập nhật
 README, báo rõ phần chưa kiểm được.
+```
+
+## 15. Đơn giản hóa xem kết quả, lưu và in phiếu
+
+```text
+Thực hiện giai đoạn 15 tại mục 14 của docs/PLAN.md. Chỉ sửa giao diện;
+không đổi chấm điểm, nội dung phiếu, mã tra cứu, API. Dùng lại
+FormModal, ReceiptSheet, receiptDownload và token/class hiện có.
+
+Màn kết quả:
+- Một nút chính "Lưu / In phiếu". Khối trên cùng: Đạt/Không đạt, tỷ lệ,
+  đúng/tổng, mã phiếu (sao chép) + một dòng giải thích ngắn.
+- "Thi lượt tiếp" trong khối riêng, chỉ khi còn lượt. "Lịch sử làm bài",
+  "Về danh sách đợt" là liên kết nhỏ. "Xem lại câu trả lời" thu gọn.
+
+Cửa sổ phiếu (modal trên màn kết quả, không chuyển trang, không tự in):
+- Xem trước tờ phiếu + nút theo thiết bị:
+  máy tính: "In phiếu" (chính), "Tải PDF";
+  điện thoại: "Lưu ảnh phiếu" (chính), "Tải PDF".
+- "Lưu ảnh phiếu": tạo PNG từ tờ phiếu (html-to-image), hiển thị ảnh để
+  nhấn giữ lưu; thêm nút tải ảnh khi trình duyệt hỗ trợ.
+- Trong Zalo/Facebook/Messenger (nhận biết qua user agent): ẩn "In
+  phiếu", hiện "Muốn in hoặc tải PDF, mở bằng Chrome/Safari"; tải PDF
+  lỗi thì gợi ý "Lưu ảnh phiếu".
+- Đóng cửa sổ: ở lại màn kết quả.
+
+Khác:
+- /attempts/:id/receipt chuyển hướng (replace) về /attempts/:id/result
+  và mở sẵn cửa sổ phiếu; bỏ tham số action=print|download.
+- Mã phiếu chỉ giải thích ở một chỗ; bỏ khung thông báo lặp về mã.
+- CSS in: @page lề 0, căn lề trong tờ phiếu, không in đầu/chân trang;
+  bỏ câu dặn "bỏ chọn Đầu trang và chân trang"; vẫn đúng một trang A4.
+- /receipts: bấm mã đã lưu là tra cứu ngay; kết quả mở cùng cửa sổ phiếu.
+- Lịch sử cá nhân (danh sách lượt của một đợt): lượt đã chốt có nút
+  "Phiếu" mở thẳng cửa sổ phiếu.
+- Màn phiếu của Admin (nếu có) dùng cùng component, chỉ In và Tải PDF.
+
+Kiểm tra: unit test hàm thuần (nhận biết trình duyệt trong ứng dụng,
+chọn bộ nút theo thiết bị, chuyển hướng đường dẫn phiếu cũ); lint,
+build. Thủ công: in Chrome máy tính đúng một trang A4 không đầu/chân
+trang; "Lưu ảnh phiếu" và "Tải PDF" trên Android Chrome, iPhone Safari,
+trong Zalo; tra cứu bằng mã khi chưa vào thi; mở phiếu từ lịch sử.
+Cập nhật README; báo rõ thiết bị nào chưa thử được.
+```
+
+## 16. Đơn giản hóa trang chi tiết đợt của Admin
+
+```text
+Thực hiện giai đoạn 16 tại mục 14 của docs/PLAN.md. Chỉ sửa giao diện,
+dùng lại API đợt, cơ cấu đề, thống kê báo cáo; không đổi nghiệp vụ.
+Dùng lại component/token hiện có (Steps, Statistic, Dropdown của Ant
+Design theo pattern sẵn có).
+
+Đầu trang:
+- Liên kết nhỏ "← Danh sách đợt"; tên đợt, tag trạng thái, thời gian
+  kèm đếm ngược ("còn 4 ngày", "đang thi, kết thúc sau 2 giờ",
+  "đã kết thúc").
+- Một nút chính: "Mở đợt" (Nháp/Đã đóng) hoặc "Đóng đợt" (Đang mở),
+  qua hộp xác nhận tóm tắt cấu hình hiện có. "Mã QR", "Báo cáo",
+  "Sửa thông tin" là nút thường; điện thoại gom vào menu "⋯".
+
+Đợt Nháp (và Đã đóng chưa có lượt chính thức):
+- Steps thay khối "Sẵn sàng mở đợt": ① Thông tin & thời gian
+  ② Câu hỏi ③ Cơ cấu đề ④ Mở đợt; trạng thái xong / cần xử lý /
+  chưa làm + mô tả ngắn ("300 câu hợp lệ", "2 nghị quyết mới chưa
+  phân bổ", "thiếu giờ kết thúc"). Bước 1 mở form Sửa thông tin,
+  bước 2–3 chuyển tab. Bỏ mục "trạng thái" khỏi danh sách kiểm tra.
+- Bắt buộc trước khi mở: cơ cấu đủ câu, có giờ bắt đầu và kết thúc,
+  giờ kết thúc sau hiện tại. "Mở đợt" khóa khi thiếu, tooltip liệt kê
+  phần thiếu; Backend giữ nguyên kiểm tra.
+
+Đợt Đang mở / Đã đóng:
+- 4 số liệu chính thức: đang làm, đã nộp, người tham gia, tỷ lệ đạt;
+  tự cập nhật ~30 giây khi đang mở; liên kết "Xem báo cáo".
+- Có lượt chính thức: dòng khóa "Đã có người thi: cơ cấu đề bị khóa;
+  sửa câu hỏi chỉ áp dụng cho lượt sau".
+
+Tab:
+- Mặc định: Nháp mở tab của bước chưa xong đầu tiên; Đang mở/Đã đóng
+  mở Thông tin. Giữ tab trên URL (?tab=).
+- Thông tin: mô tả trên cùng; ba nhóm Thời gian (ghi "giờ Việt Nam" một
+  lần), Cách thi, Tùy chọn; nút "Sửa" trong tab.
+- Câu hỏi: bỏ card lồng và tiêu đề lặp; hai nút chính "Import Excel",
+  "Thêm câu hỏi"; menu "⋯" gồm "Tải Excel mẫu", "Xuất Excel"; bỏ dòng
+  "Số câu hợp lệ x / y". Import xong có nghị quyết chưa có trong cơ cấu
+  thì thông báo kèm nút "Sang Cơ cấu đề".
+- Cơ cấu đề: khóa thì Alert cảnh báo kèm lý do, form chỉ đọc; nghị
+  quyết mới chưa phân bổ lên đầu bảng, tô nổi; "Tổng: N câu mỗi đề",
+  "Xem thử 1 đề mẫu", "Lưu" trong thanh sticky ở đáy vùng tab.
+
+Backend: sửa backend/knexfile.test.js theo pool hiện hành (development
+mặc định 3, production mặc định 20, tối đa 50).
+
+Kiểm tra: unit test hàm thuần (trạng thái bước, điều kiện khóa Mở đợt
+và danh sách thiếu, nhãn đếm ngược, tab mặc định, nghị quyết chưa phân
+bổ); lint, build; backend pnpm test không còn lỗi. Đối chiếu trực quan
+Admin 1440 và 390 cho Nháp (chưa có câu / thiếu cơ cấu / đủ), Đang mở,
+Đã đóng. Cập nhật README; báo rõ phần chưa kiểm được.
+```
+
+## 17. Gộp phân hệ Quản lý đợt kiểm tra (danh sách + trang tổng quan)
+
+```text
+Thực hiện giai đoạn 17 tại mục 14 của docs/PLAN.md. Thay cách bố trí
+của giai đoạn 16 cho cả phân hệ Admin "Đợt kiểm tra". Không đổi nghiệp
+vụ, cách tính kết quả, quyền, audit. Dùng lại component đã có
+(RoundStructure, RoundQuestions, ReportTables, CommitteeReport,
+AdminAttemptHistory, RoundQrModal, RoundStatusModal, ReceiptModal) và
+token/class hiện có.
+
+Danh sách /admin/exam-rounds:
+- Nút lọc kèm số lượng: Đang mở (mặc định) / Nháp / Đã đóng. Ô tìm nhận
+  tên đợt hoặc mã phiếu (đúng định dạng mã thì tra và mở cửa sổ phiếu).
+- Mỗi đợt một dòng hai hàng, bấm cả dòng để chọn. Đang mở/Đã đóng: đã
+  nộp, đang làm, tỷ lệ Đạt. Nháp: phần còn thiếu. Bỏ nút trên từng dòng,
+  chỉ menu "⋯": Mở/Đóng đợt, Mã QR, Xóa (khi chưa có lượt).
+- "Tạo đợt" chỉ hỏi tên, tạo xong chọn ngay đợt mới.
+
+Bố cục: từ 1200px hai cột (danh sách trái cuộn riêng, tổng quan phải),
+chọn đợt không chuyển trang, URL /admin/exam-rounds/:id; dưới 1200px
+danh sách → trang tổng quan có "← Đợt kiểm tra".
+
+Trang tổng quan một trang (bỏ tab), khối xếp dọc:
+- Đầu trang: tên, trạng thái, bắt đầu → kết thúc + đếm ngược; "Mã QR"
+  và một nút chính Mở/Đóng đợt (hộp xác nhận; khóa + tooltip khi thiếu).
+- ① Số liệu: đang làm, đã nộp, người tham gia, tỷ lệ Đạt (~30 giây khi
+  đang mở) + "Xuất Excel". Nháp: danh sách "Cần làm", bấm mở đúng ngăn kéo.
+- ② Cấu hình: một dòng tóm tắt + "Sửa".
+- ③ Cơ cấu đề: tóm tắt từng nghị quyết, tổng / câu hợp lệ, cảnh báo
+  nghị quyết mới, trạng thái khóa; "Sửa", "Xem thử đề".
+- ④ Theo đảng bộ: 10 đơn vị nhiều người nhất + "Xem tất cả".
+- ⑤ Người dự thi: 10 người vừa nộp gần nhất + tìm nhanh + "Xem tất cả";
+  bấm một người mở lịch sử lượt và phiếu.
+- ⑥ Câu hỏi: số câu hợp lệ, số nghị quyết, 5 câu đúng thấp nhất +
+  "Quản lý câu hỏi".
+- ④⑤ ẩn ở đợt Nháp chưa có lượt. Có lượt chính thức: dòng khóa
+  "Đã có người thi: cơ cấu đề bị khóa; sửa câu hỏi chỉ áp dụng cho lượt sau".
+
+Ngăn kéo (Drawer; không chuyển trang; rộng trên desktop, toàn màn hình
+trên điện thoại; giữ trên URL ?panel=):
+- Sửa cấu hình: form trực tiếp Thời gian / Cách thi / Tùy chọn, Lưu,
+  hỏi lại khi đóng chưa lưu; "Xóa đợt" cuối form khi chưa có lượt.
+  Thay hộp "Sửa thông tin" và tab Thông tin.
+- Cơ cấu đề: RoundStructure.
+- Kết quả: Người dự thi / Theo đảng bộ / Theo câu hỏi; bộ lọc ngay trên
+  bảng thay hộp Bộ lọc; Xuất Excel theo bộ lọc; "Xóa dữ liệu chạy thử"
+  trong "⋯" khi xem dữ liệu thử. Thay trang /reports.
+- Quản lý câu hỏi: RoundQuestions.
+
+API (nhỏ):
+- Danh sách đợt Admin trả thêm số liệu tóm tắt từng dòng (đã nộp, đang
+  làm, tỷ lệ Đạt chính thức; Nháp: danh sách thiếu) và số đợt theo trạng
+  thái; tính theo lô, không truy vấn từng dòng.
+- API kết quả người dự thi nhận sort=latestAt&order=desc.
+- Cập nhật validator, cURL, test.
+
+Menu, route:
+- Menu Admin: Đợt kiểm tra, Cài đặt chung (đổi tên "Hướng dẫn dự thi"),
+  Tài khoản. Bỏ "Phiếu kết quả", "Trang chủ" khỏi menu Admin.
+- Chuyển hướng (replace): /admin/exam-rounds/:id/reports →
+  ?panel=results; ?tab=… → panel tương ứng/tổng quan; /admin/receipts →
+  /admin/exam-rounds; /admin/receipts/:id → mở cửa sổ phiếu.
+
+Kiểm tra: unit test hàm thuần (tóm tắt cấu hình/cơ cấu, "Cần làm", nhận
+dạng mã phiếu, ánh xạ route/tab/panel cũ, bố cục theo bề rộng); test
+backend số liệu tóm tắt (đúng số, chỉ chính thức, không N+1) và sort
+latestAt; lint, build, backend pnpm test không lỗi. Đối chiếu trực quan
+Admin 1440, 1024, 390: Nháp (chưa có câu / thiếu cơ cấu / đủ), Đang mở
+có dữ liệu, Đã đóng; mở/đóng từng ngăn kéo, F5 khi đang mở ngăn kéo,
+liên kết cũ /reports. Cập nhật README; báo rõ phần chưa kiểm được.
 ```

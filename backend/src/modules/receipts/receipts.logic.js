@@ -1,7 +1,8 @@
 const crypto=require('node:crypto');
 const {normalizeCode}=require('./receipts.validator');
 const {toIsoUtc}=require('../../utils/datetime');
-const makeCode=()=>crypto.randomBytes(10).toString('hex').toUpperCase().match(/.{4}/g).join('-');
+const CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const makeCode=()=>Array.from({length:6},()=>CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)]).join('');
 const snapshot=(attempt,config,participant)=>({
  title:config.title||'Kiểm tra nhận thức',fullName:participant.fullName||'',partyCommittee:participant.partyCommittee||'',partyBranch:participant.partyBranch||'',
  attemptNumber:Number(attempt.attempt_number),isTrial:Boolean(attempt.is_trial),status:attempt.status,

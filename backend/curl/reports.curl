@@ -37,3 +37,13 @@ curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/commi
 curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics"
 curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics" --cookie expired.cookies.txt
 curl --request GET "http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/committee-statistics" --cookie user.cookies.txt
+
+# Giai đoạn 17 — người vừa nộp: latestAt là MAX(submitted_at) khi sort=latestAt,
+# null (xếp cuối khi desc) nếu chưa nộp; latestSubmittedAt giữ cùng thời điểm.
+# Thống kê/bộ lọc/điểm không đổi; phân trang được sắp ở SQL trước limit/offset.
+curl -G 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results' -b admin.cookies.txt --data-urlencode 'sort=latestAt' --data-urlencode 'order=desc' --data-urlencode 'isTrial=false' --data-urlencode 'limit=10' --data-urlencode 'page=1'
+curl -G 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results' -b admin.cookies.txt --data-urlencode 'sort=latestAt' --data-urlencode 'order=asc' --data-urlencode 'isTrial=true' --data-urlencode 'search=Nguyễn'
+# 422 sort/order sai; 401 thiếu phiên; 403 USER gọi API
+curl 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results?sort=latestAt&order=bad' -b admin.cookies.txt
+curl 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results?sort=latestAt&order=desc'
+curl 'http://localhost:3108/api/admin/exam-rounds/<ROUND_ID>/results?sort=latestAt&order=desc' -b user.cookies.txt

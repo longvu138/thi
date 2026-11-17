@@ -61,7 +61,7 @@ Backend tách route/controller/validator/service theo module trong `modules/`; h
 
 ## Triển khai
 
-Hosting Node.js/cPanel (không Docker): xem [hướng dẫn deploy hosting](docs/DEPLOY_HOSTING.md). Docker Compose/VPS: xem `docs/VAN_HANH.md`. `setup-deploy.js` và tài liệu triển khai cũ đã được đánh dấu lỗi thời.
+Hosting Node.js/cPanel (không Docker): xem [hướng dẫn deploy hosting](docs/DEPLOY_HOSTING.md). Docker Compose/VPS: xem `docs/VAN_HANH.md`.
 
 ## Câu hỏi theo đợt (giai đoạn 8)
 
@@ -96,7 +96,7 @@ ADMIN mở danh sách/chi tiết đợt → **Báo cáo / Kết quả và báo c
 
 ## Phiếu kết quả và in lại bằng mã
 
-Sau khi làm xong, người dự thi nhận mã và mở **Phiếu kết quả / In phiếu** để in A4 hoặc lưu PDF theo mẫu. Khi không còn phiên đăng nhập, chọn **Tra cứu / In lại phiếu kết quả bằng mã** trên cổng vào thi (`/receipts`), nhập mã rồi in lại. Trình duyệt chỉ lưu mã, tối đa 10 mã gần nhất. Phiếu dùng snapshot, không thay điểm/lịch sử thi.
+Sau khi làm xong, người dự thi nhận mã và bấm **Lưu / In phiếu** để mở modal xem trước, in A4, tải PDF hoặc lưu ảnh trên điện thoại. Modal không tự in và không chuyển trang. Khi không còn phiên đăng nhập, chọn **Tra cứu / In lại phiếu kết quả bằng mã** trên cổng vào thi (`/receipts`), nhập mã rồi in lại. Trình duyệt chỉ lưu mã, tối đa 10 mã gần nhất. Phiếu dùng snapshot, không thay điểm/lịch sử thi.
 
 Áp dụng migration mới bằng `cd backend && pnpm migrate` để thêm `attempt_receipts`; không reset database hiện có. Hướng dẫn/test/API xem README backend/frontend và `backend/curl/receipts.curl`. Đây là yêu cầu bổ sung sau giai đoạn 8; giai đoạn 9 rà soát cả hồi quy phiếu.
 
@@ -113,4 +113,10 @@ Giai đoạn 12: lựa chọn lưu tạm sessionStorage (không lưu nội dung 
 
 ## Triển khai Docker — giai đoạn 13
 
-Cấu hình cũ đã được thay bằng Compose MySQL 8.4 → migrate → một Backend → Caddy + frontend build. Xem [hướng dẫn vận hành](docs/VAN_HANH.md) cho cài mới, HTTPS/LAN, tạo admin, rate limit, thử tải 1000 người, cron backup và restore có xác nhận. Copy `.env.production.example` thành `.env.production`, tự tạo secret riêng, không commit; chạy `docker compose --env-file .env.production up -d --build --wait`. Không dùng setup-deploy cũ. Không mặc định coi test local là bằng chứng đủ tải máy chủ thật.
+Cấu hình cũ đã được thay bằng Compose MySQL 8.4 → migrate → một Backend → Caddy + frontend build. Xem [hướng dẫn vận hành](docs/VAN_HANH.md) cho cài mới, HTTPS/LAN, tạo admin, rate limit, thử tải 1000 người, cron backup và restore có xác nhận. Copy `.env.production.example` thành `.env.production`, tự tạo secret riêng, không commit; chạy `docker compose --env-file .env.production up -d --build --wait`. Không mặc định coi test local là bằng chứng đủ tải máy chủ thật.
+
+Giai đoạn 15: cửa sổ phiếu dùng chung cho kết quả/tra cứu/lịch sử/Admin; hướng dẫn và checklist tự thử tại [frontend/README.md](frontend/README.md#giai-đoạn-15--cửa-sổ-phiếu-dùng-chung). Chỉ kiểm tra code/unit/lint/build, chưa thử thiết bị hoặc in thực tế.
+
+Giai đoạn 16: chi tiết đợt Admin có Steps chuẩn bị, tab trên URL, đếm ngược, menu mobile và cơ cấu sticky. Test pool đúng dev 3/production 20/tối đa 50. Ghi nhận này đã được thay thế ở giai đoạn 17 (summary theo lô đã có đủ đang làm/đã nộp); xem [frontend/README.md](frontend/README.md) để biết giới hạn và cách thử.
+
+Giai đoạn 17: Admin Đợt kiểm tra dùng workspace danh sách/tổng quan và Drawer config/structure/results/questions. API danh sách có summary theo lô + statusCounts; kết quả hỗ trợ sort latestAt trước phân trang. Không migration/đổi chấm điểm hoặc snapshot. Kiểm tra code: frontend 112 PASS, lint/build PASS; backend 113 PASS, 9 integration DB SKIP. Chi tiết, giới hạn xác minh và checklist người dùng tự thử: [STAGE17_REVIEW](docs/STAGE17_REVIEW.md).

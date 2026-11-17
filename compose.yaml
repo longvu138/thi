@@ -38,7 +38,6 @@ x-backend-env: &backend-env
   ATTEMPT_EXPIRY_INTERVAL_MS: ${ATTEMPT_EXPIRY_INTERVAL_MS:-10000}
   ATTEMPT_EXPIRY_MAX_RUN_MS: ${ATTEMPT_EXPIRY_MAX_RUN_MS:-20000}
   LOAD_TEST_ENABLED: ${LOAD_TEST_ENABLED:-false}
-  APP_SETTINGS_FILE: /app/storage/settings.json
   LOG_LEVEL: ${LOG_LEVEL:-info}
   LOG_MAX_SIZE: 20m
   LOG_RETENTION: 30d
@@ -79,7 +78,7 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 40s
-    volumes: ["app_logs:/app/logs", "app_settings:/app/storage"]
+    volumes: ["app_logs:/app/logs"]
     depends_on: {migrate: {condition: service_completed_successfully}}
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3108/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -107,6 +106,5 @@ services:
 volumes:
   mysql_data:
   app_logs:
-  app_settings:
   caddy_data:
   caddy_config:

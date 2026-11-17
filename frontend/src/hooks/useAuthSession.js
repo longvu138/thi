@@ -61,12 +61,14 @@ export const useAuthSession = () => {
     return response.user;
   }, []);
 
-  const handleAuthenticated = useCallback((response) => {
+  const handleAuthenticated = useCallback((response, returnPath = null) => {
     const nextUser = response?.user || null;
     // Xóa toàn bộ cache trước khi gán người dùng mới: không hiển thị dữ liệu của phiên trước dù chỉ một khung hình.
     queryClient.clear();
+    const safeReturnPath = returnPath ? participantReturnPath(new URLSearchParams({continue:returnPath}).toString()) : participantReturnPath(location.search);
+    const destination=(nextUser?.role === "USER" && safeReturnPath) || getDefaultAuthenticatedPath(nextUser);
+    navigate(destination,{replace:true});
     if (nextUser) setCurrentUser(nextUser);
-    navigate((nextUser?.role === "USER" && participantReturnPath(location.search)) || getDefaultAuthenticatedPath(nextUser));
   }, [navigate, queryClient, location.search]);
 
   const handleLogout = useCallback(async () => {
@@ -75,7 +77,7 @@ export const useAuthSession = () => {
     clearAttemptDrafts();
     setCurrentUser(null);
     queryClient.clear();
-    navigate(currentUser?.role === "ADMIN" ? "/admin/login" : "/login");
+    navigate(currentUser?.role === "ADMIN" ? "/admin/login" : "/");
   }, [navigate, queryClient, currentUser?.role]);
 
   return {

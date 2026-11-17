@@ -1,6 +1,6 @@
 export const RECEIPT_CODES_KEY='savedReceiptCodes';
 export const parseReceiptCodes=value=>{
- try{const data=JSON.parse(value||'[]');return Array.isArray(data)?[...new Set(data.filter(code=>typeof code==='string'&&/^(?:[0-9A-F]{4}-){4}[0-9A-F]{4}$/.test(code)))].slice(0,10):[];}catch{return [];}
+ try{const data=JSON.parse(value||'[]');return Array.isArray(data)?[...new Set(data.filter(code=>typeof code==='string'&&/^(?:[A-Z0-9]{6}|(?:[0-9A-F]{4}-){4}[0-9A-F]{4})$/.test(code)))].slice(0,10):[];}catch{return [];}
 };
 export const rememberReceiptCode=(stored,code)=>parseReceiptCodes(JSON.stringify([code,...parseReceiptCodes(stored)]));
 export const receiptDate=iso=>{

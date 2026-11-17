@@ -1,7 +1,7 @@
 import {Button,QRCode,Space,Typography} from 'antd';
 import {FormModal} from '../common/FormModal';
 export const WebsiteQrModal=({open,onClose})=>{
- const url=new URL('/login',import.meta.env.VITE_PUBLIC_APP_URL||window.location.origin).href;
+ const url=new URL('/',import.meta.env.VITE_PUBLIC_APP_URL||window.location.origin).href;
  return <FormModal title="Truy cập website trên điện thoại" open={open} width={440} onCancel={onClose} footer={<Button onClick={onClose}>Đóng</Button>}>
   <Space orientation="vertical" size={16} className="full-width">
    <Typography.Paragraph>Quét mã QR để mở cổng kiểm tra, chọn đợt và nhập thông tin tham gia.</Typography.Paragraph>

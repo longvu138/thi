@@ -13,7 +13,7 @@ const validate = (id, query = {}) => {
  }
  if (query.result !== undefined && !['PASSED','FAILED','IN_PROGRESS_ROUND','NOT_STARTED'].includes(query.result)) throw httpError(422,'Kết quả cuối không hợp lệ');
  if (query.isTrial !== undefined && !['true','false'].includes(query.isTrial)) throw httpError(422,'Bộ lọc chạy thử phải là true hoặc false');
- if (query.sort !== undefined && !['correctRate','encounterCount'].includes(query.sort)) throw httpError(422,'Cột sắp xếp không hợp lệ');
+ if (query.sort !== undefined && !['correctRate','encounterCount','latestAt'].includes(query.sort)) throw httpError(422,'Cột sắp xếp không hợp lệ');
  if (query.order !== undefined && !['asc','desc'].includes(query.order)) throw httpError(422,'Thứ tự sắp xếp không hợp lệ');
  return {...filters,result:query.result || '',isTrial:query.isTrial==='true',sort:query.sort || 'correctRate',order:query.order || 'asc',pagination:parsePagination(query)};
 };

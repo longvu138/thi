@@ -9,7 +9,7 @@ export const PublicOpenRounds=({onSelect,selectedId})=>{
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);
  const rows=(query.data?.items||[]).filter(round=>publicRoundState(round,now).open);
  return <section className="participant-open-rounds" aria-labelledby="open-rounds-title">
-  <h2 id="open-rounds-title">Đợt kiểm tra đang mở</h2>
+  {/* <h2 id="open-rounds-title">Đợt kiểm tra đang mở</h2> */}
   {query.isPending?<Skeleton active paragraph={{rows:3}}/>:query.isError?<Alert type="warning" showIcon title="Chưa tải được danh sách đợt kiểm tra" action={<Button onClick={()=>query.refetch()}>Thử lại</Button>}/>:<>
    {!rows.length&&<Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Hiện chưa có đợt kiểm tra đang mở"/>}
    {rows.map(round=>{const state=publicRoundState(round,now);return <article className="participant-open-round" key={round.id}>

@@ -1,6 +1,6 @@
 import { APP_NAME } from "../constants/app.js";
 
-export const getDefaultAuthenticatedPath = user => user?.role === "USER" ? "/exam-rounds" : user?.role === "ADMIN" ? "/admin/exam-rounds" : "/home";
+export const getDefaultAuthenticatedPath = user => user?.role === "USER" ? "/" : user?.role === "ADMIN" ? "/admin/exam-rounds" : "/home";
 
 /**
  * Nguồn duy nhất cho menu (sidebar, bottom nav) và điều kiện vào route.
@@ -13,7 +13,6 @@ export const NAV_ITEMS = Object.freeze([
   { key: "admin-rounds", path: "/admin/exam-rounds", label: "Đợt kiểm tra", title: "Quản lý đợt kiểm tra", roles: ["ADMIN"], matchPrefix: true },
   { key: "exam-rounds", path: "/exam-rounds", label: "Đợt kiểm tra", title: "Đợt kiểm tra", roles: ["USER"], matchPrefix: true },
   { key: "results", path: "/my-results", label: "Kết quả cá nhân", title: "Kết quả cá nhân", roles: ["USER"] },
-  { key: "guide", path: "/admin/guide", label: "Hướng dẫn dự thi", title: "Hướng dẫn dự thi", roles: ["ADMIN"] },
   { key: "users", path: "/admin/users", label: "Tài khoản", title: "Quản lý tài khoản", roles: ["ADMIN"] },
   { key: "home", path: "/home", label: "Trang chủ", title: "Trang chủ", roles: ["USER"] },
 ]);
@@ -36,9 +35,8 @@ export const isNavItemActive = (item, pathname = "") =>
   pathname === item?.path || Boolean(item?.matchPrefix && pathname.startsWith(`${item.path}/`));
 
 const STANDALONE_TITLES = Object.freeze({
-  "/guide": "Hướng dẫn dự thi",
   "/receipts": "Tra cứu phiếu kết quả",
-  "/login": "Vào thi",
+  "/": "Vào thi",
   "/admin/login": "Đăng nhập quản trị",
 });
 

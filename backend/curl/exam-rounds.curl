@@ -181,3 +181,14 @@ curl --request GET "http://localhost:3108/api/exam-rounds?page=1&limit=20" --coo
 curl --request GET "http://localhost:3108/api/exam-rounds/<ROUND_ID>" --cookie user.cookies.txt
 # API ADMIN có validQuestionCount; nút Mở/Đóng vẫn PATCH status, CSRF, kiểm đủ câu và audit như cũ.
 curl --request GET "http://localhost:3108/api/admin/exam-rounds?page=1&limit=20" --cookie admin.cookies.txt
+
+# Giai đoạn 17 — danh sách Admin có statusCounts (theo search, chưa lọc status)
+# và mỗi dòng có summary, missing, totalValidQuestionCount, groupCount.
+# summary: inProgressCount, submittedCount (SUBMITTED + EXPIRED), participantCount,
+# passedCount, passRate, attemptCount chỉ chính thức; hasAttempts tính cả lượt thử.
+curl -G 'http://localhost:3108/api/admin/exam-rounds' -b admin.cookies.txt --data-urlencode 'status=OPEN' --data-urlencode 'page=1' --data-urlencode 'limit=20'
+curl -G 'http://localhost:3108/api/admin/exam-rounds' -b admin.cookies.txt --data-urlencode 'search=Nghị quyết' --data-urlencode 'status=DRAFT'
+# 422 lọc sai; 401 thiếu phiên; 403 USER gọi API Admin
+curl 'http://localhost:3108/api/admin/exam-rounds?status=INVALID' -b admin.cookies.txt
+curl 'http://localhost:3108/api/admin/exam-rounds'
+curl 'http://localhost:3108/api/admin/exam-rounds' -b user.cookies.txt

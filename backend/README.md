@@ -357,6 +357,24 @@ Tài liệu chuẩn: [VAN_HANH.md](../docs/VAN_HANH.md), `../.env.production.exa
 
 Job expiry lặp lô 100, dừng khi chưa đủ lô hoặc hết ngân sách `ATTEMPT_EXPIRY_MAX_RUN_MS`, chống chạy chồng; không thay chấm điểm/snapshot. Query chỉ chọn quá hạn cộng grace để lô chưa tới hạn không chặn các lô tiếp theo.
 
-API cấu hình hướng dẫn: `GET /api/public/guide` trả `{supportContact}`, `PUT /api/admin/guide` cùng payload, ADMIN + CSRF, audit `guide_settings_updated`. Tối đa 1000 ký tự, chỉ văn bản, NFC. Persist atomic JSON tại `APP_SETTINGS_FILE` (mặc định storage/settings.json), Docker dùng volume, không cần migration; chỉ hỗ trợ một Backend. cURL `guide.curl`, `rate-limit.curl`.
+Đã bỏ API cấu hình hướng dẫn (`/api/public/guide`, `/api/admin/guide`) và biến `APP_SETTINGS_FILE` theo yêu cầu đơn giản hóa; trang hướng dẫn phía frontend cũng đã bỏ.
 
-`pnpm load-test` mặc định 1000 user, ramp 300s, batch/GET 30s, nộp dồn trong 120s cuối của 600s; nhóm 100/IP sau handshake DB thử. Chỉ DB exam_load_test_*, đợt E2E_ROUND_ OPEN trong cửa sổ thử. Tham số rút gọn và ngưỡng trong tài liệu vận hành. Môi trường Docker QA riêng được giao ở giai đoạn này, không đổi DB dev hay chạy trên dữ liệu thật. Công cụ setup-deploy cũ đã vô hiệu hóa.
+`pnpm load-test` mặc định 1000 user, ramp 300s, batch/GET 30s, nộp dồn trong 120s cuối của 600s; nhóm 100/IP sau handshake DB thử. Chỉ DB exam_load_test_*, đợt E2E_ROUND_ OPEN trong cửa sổ thử. Tham số rút gọn và ngưỡng trong tài liệu vận hành. Môi trường Docker QA riêng được giao ở giai đoạn này, không đổi DB dev hay chạy trên dữ liệu thật.
+
+Mã xác nhận phiếu mới gồm 6 ký tự chữ in hoa/số (tránh ký tự dễ nhầm). Unique index và cơ chế sinh lại khi trùng vẫn giữ nguyên. Mã dài đã cấp vẫn tra cứu được, không đổi dữ liệu phiếu cũ, không cần migration.
+
+### Admin in lại phiếu
+
+Menu **Phiếu kết quả** tại `/admin/receipts`: danh sách có phân trang, tìm chính xác theo mã mới 6 ký tự hoặc mã cũ, xem/in lại và tải PDF cùng mẫu người thi. API ADMIN: `GET /api/admin/receipts?page=1&limit=20&code=AB3K7X`, `GET /api/admin/receipts/:attemptId`. Chỉ đọc snapshot phiếu đã lưu, không tạo/chấm lại lượt; có audit khi liệt kê/xem. Không có danh sách phiếu công khai cho USER. Không cần migration.
+
+Tự thử: Admin → Phiếu kết quả → tìm mã → Xem phiếu / In lại → Tải PDF; thử mã không tồn tại và mã sai. USER gọi hai API ADMIN phải 403, chưa đăng nhập 401. Danh sách chỉ có phiếu đã được cấp; lượt chưa kết thúc không có phiếu.
+
+Giai đoạn 16 chỉ sửa `knexfile.test.js`: mặc định development 3, production 20, trần 50, không sửa cấu hình runtime/API. `pnpm test` đã qua 108 test, 9 integration DB skip vì không được dựng/xóa schema trên DB dev.
+
+### Giai đoạn 17 — summary Admin theo lô và kết quả gần nhất
+
+`GET /api/admin/exam-rounds` thêm `statusCounts` (theo search, trước status filter), mỗi dòng có summary/missing/totalValidQuestionCount/groupCount. Chi tiết Admin dùng cùng summary. Helper `modules/exam-rounds/admin-summary.js` gom theo round/user rồi round bằng một query attempts cho mọi ID trên trang; không N+1. summary chính thức: inProgressCount, submittedCount (SUBMITTED + EXPIRED), participantCount, passedCount, passRate, attemptCount; hasAttempts tính cả thử để giữ điều kiện xóa. Mọi tỷ lệ/điểm/kết quả dùng quy tắc cũ, không migration.
+
+`GET /api/admin/exam-rounds/:id/results?sort=latestAt&order=desc`: sort theo lần nộp cuối của người trong dữ liệu đã lọc trước limit/offset, id làm thứ tự phụ ổn định. Khi dùng sort này latestAt = MAX(submitted_at), null nếu chưa nộp; latestSubmittedAt được bổ sung, cách xem mặc định cũ giữ latestAt cũ. Không đổi cách tính điểm/kết quả cuối, quyền hay audit. cURL đã cập nhật trong `curl/exam-rounds.curl`, `curl/reports.curl`.
+
+`pnpm test`: **113 PASS, 0 FAIL, 9 SKIP**. Unit kiểm tra SQL theo lô/không N+1, số liệu serialize và SQL latestAt/phân trang. Regression MySQL đã bổ sung vào reports.integration.test.js nhưng SKIP vì suite cần schema rỗng và dựng/xóa bảng, không phù hợp DB dev. Không nhận unit là bằng chứng integration pass. Xem [STAGE17_REVIEW](../docs/STAGE17_REVIEW.md).
